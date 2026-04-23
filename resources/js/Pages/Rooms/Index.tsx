@@ -54,7 +54,7 @@ export default function Index({ rooms }: { rooms: any[] }) {
                             </div>
                             <div className="p-8">
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                    {room.features.map((feature, index) => (
+                                    {room.features.map((feature: string, index: number) => (
                                         <span key={index} className="text-[10px] border border-stone-300 px-2 py-1 text-stone-500 tracking-tighter">
                                             {feature}
                                         </span>
