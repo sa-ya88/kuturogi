@@ -1,0 +1,65 @@
+name: Deploy Kuturogi Project
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Node.js & React Build (TypeScriptをJSにコンパイル)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # プロジェクトのNodeバージョンに合わせる
+      - name: Install & Build Frontend
+        run: |
+          npm install
+          npm run build
+
+      # 2. Composer Install
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4' # ロリポップのPHPバージョンに合わせる
+      - name: Install Composer Dependencies
+        run: composer install --optimize-autoloader --no-dev
+
+      # 3. rsyncによる転送
+      - name: Deploy via rsync
+        uses: Burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avzr --delete
+          path: ./
+          remote_path: /home/users/1/moo.jp-t-s-p/web/kuturogi
+          remote_host: ${{ secrets.HOST }}
+          remote_user: ${{ secrets.USER }}
+          remote_port: ${{ secrets.PORT }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # 上書き・削除したくないものを除外
+          exclude: |
+            /.env
+            /storage/*.key
+            /storage/logs/
+            /storage/framework/cache/
+            /storage/framework/sessions/
+            /storage/framework/views/
+            /node_modules/
+
+      # 4. サーバー上での後処理
+      - name: Post-deployment commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd /home/users/1/moo.jp-t-s-p/web/kuturogi/
+            /usr/local/php/8.4/bin/php artisan migrate --force
+            /usr/local/php/8.4/bin/php artisan config:cache
+            /usr/local/php/8.4/bin/php artisan route:cache
+            /usr/local/php/8.4/bin/php artisan view:cache
