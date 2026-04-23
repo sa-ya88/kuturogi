@@ -10,55 +10,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Node.js & React Build (TypeScriptをJSにコンパイル)
+      # 1. フロントエンドのビルド (TypeScriptをJSにコンパイル)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # プロジェクトのNodeバージョンに合わせる
+          node-version: '24'
       - name: Install & Build Frontend
         run: |
           npm install
           npm run build
 
-      # 2. Composer Install
+      # 2. バックエンドの準備 (PHP/Composer)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4' # ロリポップのPHPバージョンに合わせる
+          php-version: '8.4' # ロリポップの設定に合わせる
       - name: Install Composer Dependencies
         run: composer install --optimize-autoloader --no-dev
 
-      # 3. rsyncによる転送
+      # 3. rsyncによる転送 (kuturogi フォルダへ)
       - name: Deploy via rsync
         uses: Burnett01/rsync-deployments@7.0.1
         with:
           switches: -avzr --delete
           path: ./
-          remote_path: /home/users/1/moo.jp-t-s-p/web/kuturogi
-          remote_host: ${{ secrets.HOST }}
-          remote_user: ${{ secrets.USER }}
-          remote_port: ${{ secrets.PORT }}
+          remote_path: /home/users/1/moo.jp-t-s-p/web/kuturogi/
+          remote_host: ${{ secrets.SSH_HOST }}
+          remote_user: ${{ secrets.SSH_USER }}
+          remote_port: ${{ secrets.SSH_PORT }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # 上書き・削除したくないものを除外
+          # サーバー固有のファイルや不要なものは除外
           exclude: |
+            /.git*
             /.env
-            /storage/*.key
+            /node_modules/
             /storage/logs/
             /storage/framework/cache/
             /storage/framework/sessions/
             /storage/framework/views/
-            /node_modules/
 
-      # 4. サーバー上での後処理
+      # 4. サーバー上での後処理 (SSH)
       - name: Post-deployment commands
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USER }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
             cd /home/users/1/moo.jp-t-s-p/web/kuturogi/
+            # ロリポップのPHP 8.4のパスを指定
             /usr/local/php/8.4/bin/php artisan migrate --force
             /usr/local/php/8.4/bin/php artisan config:cache
             /usr/local/php/8.4/bin/php artisan route:cache
