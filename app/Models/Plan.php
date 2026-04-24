@@ -6,11 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plan extends Model
 {
-    protected $fillable = ['room_id', 'name', 'price_per_person', 'description'];
+    protected $fillable = [
+        'room_id',
+        'name',
+        'price_per_person',
+        'description',
+        'images',
+        'has_breakfast',
+        'has_dinner',
+    ];
 
-    public function room()
+    protected $casts = [
+        'images' => 'array',
+    ];
+
+    public function rooms()
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsToMany(Room::class);
     }
 
 }

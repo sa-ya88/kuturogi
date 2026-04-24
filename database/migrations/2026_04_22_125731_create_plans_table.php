@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained()->cascadeOnDelete(); // どの部屋のプランか
-            $table->string('name');         // プラン名（例：創作懐石プラン）
-            $table->integer('price_per_person'); // 1人あたりの料金
-            $table->text('description');    // プラン説明
+            $table->string('name');
+            $table->integer('price_per_person');
+            $table->text('description');
+            $table->json('images');
+            $table->boolean('has_breakfast')->default(false);
+            $table->boolean('has_dinner')->default(false);
             $table->timestamps();
         });
     }

@@ -1,33 +1,16 @@
-// resources/js/Pages/Rooms/Index.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link } from '@inertiajs/react';
 
-// サンプルの部屋データ（後でLaravelのDBから取得するように書き換えます）
-const rooms = [
-    {
-        id: 1,
-        name: '特別室「雅」- MIYABI -',
-        description: '当館最高級の広さを誇る、源泉掛け流し露天風呂付きの客室です。',
-        features: ['露天風呂付', '和洋室', '定員2〜4名'],
-        image: 'https://unsplash.com',
-    },
-    {
-        id: 2,
-        name: '和モダン客室「凛」- RIN -',
-        description: '琉球畳の香りに包まれながら、洗練された現代的な空間でお寛ぎください。',
-        features: ['和室', '禁煙', '定員2〜3名'],
-        image: 'https://unsplash.com',
-    },
-    {
-        id: 3,
-        name: 'スタンダード和室',
-        description: '伝統的な日本の情緒を大切にした、落ち着きのあるスタンダードなお部屋です。',
-        features: ['和室', '定員1〜4名'],
-        image: 'https://unsplash.com',
-    },
-];
+// 型定義をしっかり反映
+interface Room {
+    id: number;
+    name: string;
+    description: string;
+    features: string[];
+    images: string[];
+}
 
-export default function Index({ rooms }: { rooms: any[] }) {
+export default function Index({ rooms }: { rooms: Room[] }) {
     return (
         <GuestLayout>
             <Head title="お部屋一覧" />
@@ -46,8 +29,9 @@ export default function Index({ rooms }: { rooms: any[] }) {
                     {rooms.map((room) => (
                         <div key={room.id} className="group bg-white overflow-hidden shadow-sm hover:shadow-xl transition-shadow duration-300">
                             <div className="relative h-64 overflow-hidden">
+                                {/* 画像は images配列の1枚目(index 0)を表示 */}
                                 <img 
-                                    src={room.image} 
+                                    src={room.images[0]} 
                                     alt={room.name} 
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />

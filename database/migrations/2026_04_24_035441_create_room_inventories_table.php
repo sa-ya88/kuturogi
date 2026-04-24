@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rooms', function (Blueprint $table) {
+        Schema::create('room_inventories', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->integer('price_per_person');
-            $table->text('description');
-            $table->json('features');
-            $table->json('images');
+            $table->foreignId('room_id')->constrained()->onDelete('cascade'); // 部屋
+            $table->date('date'); // 日付
+            $table->integer('remains')->default(0); // 残り室数
             $table->timestamps();
+            $table->unique(['room_id', 'date']); //ユニーク制約
         });
-        
     }
 
     /**
@@ -28,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rooms');
+        Schema::dropIfExists('room_inventories');
     }
 };

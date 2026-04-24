@@ -15,10 +15,24 @@ export default function Onsen() {
             </section>
 
             <section className="py-20 max-w-5xl mx-auto px-4 space-y-32">
+                {/* 内湯 */}
+                <div className="flex flex-col md:flex-row-reverse items-center gap-12">
+                    <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
+                        <img src="/images/onsen1.webp" alt="大浴場" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
+                    </div>
+                    <div className="w-full md:w-1/2">
+                        <h2 className="text-2xl mb-6 tracking-widest">檜の香る大浴場</h2>
+                        <p className="text-stone-600 leading-loose">
+                            香り高い檜を使用した広々とした内湯。<br />
+                            源泉のぬくもりが、旅の疲れを芯から癒してくれます。
+                        </p>
+                    </div>
+                </div>
+
                 {/* 露天風呂 */}
                 <div className="flex flex-col md:flex-row items-center gap-12">
                     <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
-                        <img src="https://unsplash.com" alt="露天風呂" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
+                        <img src="/images/onsen2.webp" alt="露天風呂" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
                     </div>
                     <div className="w-full md:w-1/2">
                         <h2 className="text-2xl mb-6 tracking-widest">四季を愛でる露天風呂</h2>
@@ -32,13 +46,13 @@ export default function Onsen() {
                 {/* 内湯 */}
                 <div className="flex flex-col md:flex-row-reverse items-center gap-12">
                     <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
-                        <img src="https://unsplash.com" alt="大浴場" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
+                        <img src="/images/onsen3.webp" alt="大浴場" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
                     </div>
                     <div className="w-full md:w-1/2">
-                        <h2 className="text-2xl mb-6 tracking-widest">檜の香る大浴場</h2>
+                        <h2 className="text-2xl mb-6 tracking-widest">湯灯りの湯</h2>
                         <p className="text-stone-600 leading-loose">
-                            香り高い檜を使用した広々とした内湯。<br />
-                            源泉のぬくもりが、旅の疲れを芯から癒してくれます。
+                            やわらかな灯籠と天井の光に包まれる、静寂の内湯。<br />
+                            檜と石のぬくもりが溶け合い、心身をゆっくりと解きほぐします。
                         </p>
                     </div>
                 </div>

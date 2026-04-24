@@ -30,38 +30,59 @@ export default function Create({ rooms, selectedRoomId }: any) {
     };
     
     const groupedPlans = useMemo(() => {
-    const groups: any = {};
-    const allRoomDetails = rooms.map((r: any) => ({
-        room_id: r.id,
-        room_name: r.name,
-        room_image: r.image_url,
-    }));
+        const groups: any = {};
 
-    rooms.forEach((room: any) => {
-        room.plans.forEach((plan: any) => {
-            if (!groups[plan.name]) {
-                groups[plan.name] = { 
-                    ...plan, 
-                    room_options: allRoomDetails.map((rd: any) => ({ ...rd, price: plan.price_per_person }))
-                };
-            }
+        // 1. 各部屋にぶら下がっているプランをループ
+        rooms.forEach((room: any) => {
+            // room.plans が undefined や空配列でないか確認
+            if (!room.plans) return;
+
+            room.plans.forEach((plan: any) => {
+                // プラン名（またはID）をキーにしてグループ化
+                const groupKey = plan.name; 
+
+                if (!groups[groupKey]) {
+                    groups[groupKey] = { 
+                        ...plan, 
+                        plan_thumbnail: plan.images?.[0] || '/images/no-image.png',
+                        room_options: [] 
+                    };
+                }
+
+                // 在庫判定（日付未選択時は null なので通るはず）
+                const hasStock = room.current_inventory === null || room.current_inventory >= searchQuery.room_count;
+
+                groups[groupKey].room_options.push({
+                    room_id: room.id,
+                    room_name: room.name,
+                    room_image: room.images?.[0] || '/images/no-image.webp',
+                    price: (Number(room.price_per_person) || 0) + (Number(plan.price_per_person) || 0),
+                    is_available: hasStock,
+                    remains: room.current_inventory
+                });
+            });
         });
-    });
-    
+
         let result = Object.values(groups);
+
+        // 2. フィルタリング（デバッグのため一旦ゆるく設定）
         if (searchQuery.room_id) {
+            const selectedId = parseInt(searchQuery.room_id as string);
             result = result.filter((g: any) => 
-                g.room_options.some((opt: any) => opt.room_id === parseInt(searchQuery.room_id as string))
+                g.room_options.some((opt: any) => opt.room_id === selectedId)
             );
         }
+
+        console.log("Grouped Result:", result); // ブラウザのコンソールでこれが出るか確認
         return result;
-    }, [rooms, searchQuery.room_id]);
+    }, [rooms, searchQuery.room_id, searchQuery.room_count]);
+
 
     return (
         <GuestLayout>
             <Head title="宿泊プラン一覧" />
 
-            {/* 1. 改善された検索バー（z-indexとpadding/marginを調整） */}
+            {/* 1. 検索バー */}
             <div className="sticky top-20 z-50 bg-stone-800 text-white border-t border-stone-700">
                 <div className="max-w-7xl mx-auto px-4 py-6">
                     <div className="flex flex-wrap items-center gap-y-6 gap-x-8 text-xs">
@@ -116,7 +137,7 @@ export default function Create({ rooms, selectedRoomId }: any) {
                 </div>
             </div>
 
-            {/* 2. メインコンテンツ（検索バーに隠れないよう margin-top を確保） */}
+            {/* 2. メインコンテンツ*/}
             <section className="py-12 max-w-7xl mx-auto px-4 mt-4">
                 <div className="bg-amber-50 border border-amber-200 p-4 mt-10 mb-10 text-xs text-amber-900 leading-loose flex items-start gap-3">
                     <span className="text-lg">info</span>
@@ -131,7 +152,11 @@ export default function Create({ rooms, selectedRoomId }: any) {
                         <div key={group.id} className="bg-white border border-stone-200 flex flex-col lg:flex-row shadow-sm overflow-hidden group">
                             {/* 左：画像 */}
                             <div className="lg:w-1/4 h-64 lg:h-auto overflow-hidden">
-                                <img src={group.room_options[0].room_image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="" />
+                                <img 
+                                    src={group.plan_thumbnail}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                    alt={group.name} 
+                                />
                             </div>
 
                             {/* 中：プラン詳細 */}
@@ -146,25 +171,32 @@ export default function Create({ rooms, selectedRoomId }: any) {
                             </div>
 
                             {/* 右：お部屋選択肢（全て表示） */}
-                            <div className="flex-1 bg-stone-50 divide-y divide-stone-200">
-                                {group.room_options.map((opt: any) => (
-                                    <div key={opt.room_id} className={`flex justify-between items-center p-6 transition-colors ${searchQuery.room_id && parseInt(searchQuery.room_id as string) === opt.room_id ? 'bg-amber-50/50' : 'hover:bg-white'}`}>
-                                        <div className="font-bold text-stone-700 tracking-wide">{opt.room_name}</div>
-                                        <div className="flex items-center gap-8">
-                                            <div className="text-right">
-                                                <div className="text-amber-900 font-serif text-xl font-bold italic">
-                                                    ¥{opt.price.toLocaleString()}〜
-                                                </div>
-                                                <div className="text-[10px] text-stone-400 mt-1">消費税込・サービス料込</div>
-                                            </div>
-                                            <button 
-                                                onClick={() => handleReserve(group.id, opt.room_id)} 
-                                                disabled={processing}
-                                                className="bg-stone-800 text-white text-[10px] px-4 py-2 hover:bg-stone-700 transition disabled:opacity-50"
-                                            >
-                                                {processing ? '送信中...' : '予約する'}
-                                            </button>
+                            <div className="flex flex-col gap-1">
+                                {group.room_options.map((option: any) => (
+                                    <div key={option.room_id} className="flex items-center justify-between bg-stone-50 p-4 rounded border border-stone-100">
+                                        
+                                        {/* 1. 部屋情報エリア*/}
+                                        <div className="flex-1 min-w-0 pr-4">
+                                            <p className="text-sm font-bold text-stone-800 truncate">
+                                                {option.room_name}
+                                            </p>
                                         </div>
+
+                                        {/* 2. 価格エリア*/}
+                                        <div className="w-32 text-right pr-6">
+                                            <span className="text-xs text-stone-500">1名 </span>
+                                            <span className="text-lg font-bold text-amber-900">
+                                                ¥{option.price.toLocaleString()}
+                                            </span>
+                                        </div>
+
+                                        {/* 3. ボタンエリア*/}
+                                        <button 
+                                            onClick={() => handleReserve(group.id, option.room_id)}
+                                            className="w-40 py-2 bg-stone-800 text-white text-xs tracking-[0.2em] font-bold hover:bg-stone-700 transition-all flex-shrink-0"
+                                        >
+                                            予約する
+                                        </button>
                                     </div>
                                 ))}
                             </div>

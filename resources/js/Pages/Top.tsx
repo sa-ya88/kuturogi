@@ -17,9 +17,14 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
             {/* メインビジュアル */}
             <section className="relative h-screen flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-stone-900/40 z-10" />
-                <img 
-                    src="https://unsplash.com" 
-                    alt="旅館の外観" 
+                
+                {/* 動画タグに差し替え */}
+                <video
+                    src="/videos/main-visual.mp4"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
                     className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="relative z-20 text-center text-white">
