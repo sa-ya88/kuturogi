@@ -28,26 +28,22 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --optimize-autoloader --no-dev
 
-      # 3. rsyncによる転送 (kuturogi フォルダへ)
+      # 3. rsyncによる転送 (登録名に合わせて SSH_ を付与)
       - name: Deploy via rsync
-        uses: Burnett01/rsync-deployments@7.0.1
-        with:
-          switches: -avzr --delete
-          path: ./
-          remote_path: /home/users/1/moo.jp-t-s-p/web/kuturogi/
-          remote_host: ${{ secrets.SSH_HOST }}
-          remote_user: ${{ secrets.SSH_USER }}
-          remote_port: ${{ secrets.SSH_PORT }}
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # サーバー固有のファイルや不要なものは除外
-          exclude: |
-            /.git*
-            /.env
-            /node_modules/
-            /storage/logs/
-            /storage/framework/cache/
-            /storage/framework/sessions/
-            /storage/framework/views/
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > deploy_key
+          chmod 600 deploy_key
+          rsync -avzr --delete \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -i ./deploy_key -o StrictHostKeyChecking=no" \
+            --exclude='.git*' \
+            --exclude='.env' \
+            --exclude='node_modules' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/users/1/moo.jp-t-s-p/web/kuturogi/
+          rm deploy_key
 
       # 4. サーバー上での後処理 (SSH)
       - name: Post-deployment commands
