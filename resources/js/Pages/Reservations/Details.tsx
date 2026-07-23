@@ -1,11 +1,28 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
+
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-fade';
 
 export default function Details({ auth, input, room, plan }: any) {
+    const sliderImagesPlan = plan.images?.length ? plan.images : ['/images/room1.webp'];
+    const shouldUseSwiperPlan = sliderImagesPlan.length > 1;
+    const sliderImagesRoom = room.images?.length ? room.images : ['/images/room1.webp'];
+    const shouldUseSwiperRoom = sliderImagesRoom.length > 1;
+
     const { data, setData, post, processing, errors } = useForm({
         ...input,
+        check_in_date: input?.check_in_date || input?.checkin_date || '',
+        check_out_date: input?.check_out_date || input?.checkout_date || '',
+        adult_count: input?.adult_count || 2,
+        child_count: input?.child_count || 0,
+        room_count: input?.room_count || 1,
         last_name: '',
         first_name: '',
         last_name_kana: '',
@@ -23,15 +40,80 @@ export default function Details({ auth, input, room, plan }: any) {
         card_cvc: '',
     });
 
+    // バリデーションエラー用のローカルstate
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    // 宿泊日数を計算
+    const nights = useMemo(() => {
+        if (data.check_in_date && data.check_out_date) {
+            return Math.max(1, Math.floor((new Date(data.check_out_date).getTime() - new Date(data.check_in_date).getTime()) / (1000 * 60 * 60 * 24)));
+        }
+        return 1;
+    }, [data.check_in_date, data.check_out_date]);
+
     // 料金の計算（一泊あたりの合計）
+    const pricePerPersonPerNight = plan.price_per_person + room.price_per_person;
     const totalPrice = useMemo(() => {
-        const adultTotal = plan.price_per_person * data.adult_count;
-        const childTotal = (plan.price_per_person * 0.7) * data.child_count; // 子供は7割計算
-        return (adultTotal + childTotal) * data.room_count;
-    }, [data, plan]);
+        const adultTotal = pricePerPersonPerNight * data.adult_count;
+        const childTotal = (pricePerPersonPerNight * 0.7) * data.child_count; // 子供は7割計算
+        return (adultTotal + childTotal) * data.room_count * nights;
+    }, [data, plan, room, nights]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // バリデーション
+        const newErrors: Record<string, string> = {};
+        
+        // 宿泊日程のバリデーション
+        if (!data.check_in_date) {
+            newErrors.check_in_date = 'チェックイン日を入力してください';
+        }
+        if (!data.check_out_date) {
+            newErrors.check_out_date = 'チェックアウト日を入力してください';
+        }
+        
+        // チェックイン日がチェックアウト日より前であることを確認
+        if (data.check_in_date && data.check_out_date) {
+            if (new Date(data.check_in_date) >= new Date(data.check_out_date)) {
+                newErrors.check_out_date = 'チェックアウト日はチェックイン日より後の日付を選択してください';
+            }
+        }
+
+        // お客様情報のバリデーション
+        if (!data.last_name?.trim()) {
+            newErrors.last_name = 'お名前（姓）を入力してください';
+        }
+        if (!data.first_name?.trim()) {
+            newErrors.first_name = 'お名前（名）を入力してください';
+        }
+        if (!data.last_name_kana?.trim()) {
+            newErrors.last_name_kana = 'お名前（姓・ひらがな）を入力してください';
+        }
+        if (!data.first_name_kana?.trim()) {
+            newErrors.first_name_kana = 'お名前（名・ひらがな）を入力してください';
+        }
+        if (!data.tel?.trim()) {
+            newErrors.tel = '電話番号を入力してください';
+        }
+        if (!data.email?.trim()) {
+            newErrors.email = 'メールアドレスを入力してください';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+            newErrors.email = '有効なメールアドレスを入力してください';
+        }
+        if (!data.zip_code?.trim()) {
+            newErrors.zip_code = '郵便番号を入力してください';
+        }
+        if (!data.address?.trim()) {
+            newErrors.address = '住所を入力してください';
+        }
+        
+        if (Object.keys(newErrors).length > 0) {
+            setValidationErrors(newErrors);
+            return;
+        }
+        
+        setValidationErrors({});
         post(route('reservations.confirm'));
     };
 
@@ -46,7 +128,32 @@ export default function Details({ auth, input, room, plan }: any) {
                         
                         {/* 1. プラン情報 */}
                         <div className="bg-white border overflow-hidden">
-                            <img src={room.image_url} className="w-full h-64 object-cover" alt="プラン画像" />
+                            {shouldUseSwiperPlan ? (
+                                <Swiper
+                                    modules={[Navigation, Pagination, Autoplay, EffectFade]}
+                                    effect="fade"
+                                    fadeEffect={{
+                                        crossFade: true
+                                    }}
+                                    speed={1000}
+                                    autoplay={{
+                                        delay: 3000,
+                                        disableOnInteraction: false,
+                                    }}
+                                    navigation
+                                    pagination={{ clickable: true }}
+                                    loop={true}
+                                    className="h-64"
+                                >
+                                    {sliderImagesPlan.map((image: string, index: number) => (
+                                        <SwiperSlide key={index}>
+                                            <img src={image} className="w-full h-full object-cover" alt="プラン画像" />
+                                        </SwiperSlide>
+                                    ))}
+                                </Swiper>
+                            ) : (
+                                <img src={sliderImagesPlan[0]} className="w-full h-64 object-cover" alt="プラン画像" />
+                            )}
                             <div className="p-8">
                                 <h2 className="text-xl font-bold mb-4">{plan.name}</h2>
                                 <p className="text-sm text-stone-600 leading-loose">{plan.description}</p>
@@ -57,7 +164,34 @@ export default function Details({ auth, input, room, plan }: any) {
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-2 mb-6">お部屋：{room.name}</h2>
                             <div className="grid grid-cols-2 gap-8 mb-8">
-                                <img src={room.image_url} className="w-full h-40 object-cover rounded" alt="部屋画像" />
+                                {shouldUseSwiperRoom ? (
+                                    <div className="w-full min-w-0 max-w-full overflow-hidden relative">
+                                        <Swiper
+                                            modules={[Navigation, Pagination, Autoplay, EffectFade]}
+                                            effect="fade"
+                                            fadeEffect={{
+                                                crossFade: true
+                                            }}
+                                            speed={1000}
+                                            autoplay={{
+                                                delay: 3000,
+                                                disableOnInteraction: false,
+                                            }}
+                                            navigation
+                                            pagination={{ clickable: true }}
+                                            loop={true}
+                                            className="h-40"
+                                        >
+                                            {sliderImagesRoom.map((image: string, index: number) => (
+                                                <SwiperSlide key={index}>
+                                                    <img src={image} className="w-full h-full object-cover" alt="部屋画像" />
+                                                </SwiperSlide>
+                                            ))}
+                                        </Swiper>
+                                    </div>
+                                ) : (
+                                    <img src={sliderImagesRoom[0]} className="w-full h-40 object-cover rounded" alt="部屋画像" />
+                                )}
                                 <div className="text-sm space-y-2">
                                     <p className="font-bold text-stone-400 text-[10px] uppercase">Room Facilities</p>
                                     <ul className="list-disc list-inside text-stone-600">
@@ -86,7 +220,38 @@ export default function Details({ auth, input, room, plan }: any) {
                             </p>
                         </div>
 
-                        {/* 3. 人数・室数変更フォーム */}
+                        {/* 2.5 チェックイン・チェックアウト日 */}
+                        <div className="bg-white border p-8">
+                            <h2 className="text-lg font-bold border-b pb-4 mb-6">宿泊日程</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-bold mb-2">チェックイン日 <span className="text-red-600">*</span></label>
+                                    <input 
+                                        type="date" 
+                                        value={data.check_in_date} 
+                                        onChange={e => setData('check_in_date', e.target.value)} 
+                                        className={`w-full border-stone-300 ${validationErrors.check_in_date ? 'border-red-500' : ''}`}
+                                    />
+                                    {validationErrors.check_in_date && (
+                                        <p className="text-red-600 text-sm mt-2">{validationErrors.check_in_date}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold mb-2">チェックアウト日 <span className="text-red-600">*</span></label>
+                                    <input 
+                                        type="date" 
+                                        value={data.check_out_date} 
+                                        onChange={e => setData('check_out_date', e.target.value)} 
+                                        className={`w-full border-stone-300 ${validationErrors.check_out_date ? 'border-red-500' : ''}`}
+                                    />
+                                    {validationErrors.check_out_date && (
+                                        <p className="text-red-600 text-sm mt-2">{validationErrors.check_out_date}</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 4. 人数・室数変更フォーム */}
                         <div className="bg-stone-100 p-8 border">
                             <h2 className="font-bold mb-6 tracking-widest text-center">宿泊人数の変更</h2>
                             <div className="flex justify-center gap-12">
@@ -105,7 +270,7 @@ export default function Details({ auth, input, room, plan }: any) {
                             </div>
                         </div>
 
-                        {/* 4. お客様情報の入力 */}
+                        {/* 5. お客様情報の入力 */}
                         <div className="bg-white border p-8 space-y-8">
                             <div className="flex justify-between items-center border-b pb-4">
                                 <h2 className="text-xl font-bold tracking-widest">お客様情報の入力</h2>
@@ -118,37 +283,127 @@ export default function Details({ auth, input, room, plan }: any) {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <label className="block text-sm font-bold">お名前（漢字）</label>
+                                    <label className="block text-sm font-bold">お名前（漢字） <span className="text-red-600">*</span></label>
                                     <div className="flex gap-2">
-                                        <input type="text" placeholder="姓" className="w-full border-stone-300" onChange={e => setData('last_name', e.target.value)} />
-                                        <input type="text" placeholder="名" className="w-full border-stone-300" onChange={e => setData('first_name', e.target.value)} />
+                                        <div className="w-full">
+                                            <input 
+                                                type="text" 
+                                                placeholder="姓" 
+                                                className={`w-full border-stone-300 ${validationErrors.last_name ? 'border-red-500' : ''}`}
+                                                value={data.last_name}
+                                                onChange={e => setData('last_name', e.target.value)} 
+                                            />
+                                            {validationErrors.last_name && (
+                                                <p className="text-red-600 text-xs mt-1">{validationErrors.last_name}</p>
+                                            )}
+                                        </div>
+                                        <div className="w-full">
+                                            <input 
+                                                type="text" 
+                                                placeholder="名" 
+                                                className={`w-full border-stone-300 ${validationErrors.first_name ? 'border-red-500' : ''}`}
+                                                value={data.first_name}
+                                                onChange={e => setData('first_name', e.target.value)} 
+                                            />
+                                            {validationErrors.first_name && (
+                                                <p className="text-red-600 text-xs mt-1">{validationErrors.first_name}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-4">
-                                    <label className="block text-sm font-bold">お名前（ひらがな）</label>
+                                    <label className="block text-sm font-bold">お名前（ひらがな） <span className="text-red-600">*</span></label>
                                     <div className="flex gap-2">
-                                        <input type="text" placeholder="せい" className="w-full border-stone-300" onChange={e => setData('last_name_kana', e.target.value)} />
-                                        <input type="text" placeholder="めい" className="w-full border-stone-300" onChange={e => setData('first_name_kana', e.target.value)} />
+                                        <div className="w-full">
+                                            <input 
+                                                type="text" 
+                                                placeholder="せい" 
+                                                className={`w-full border-stone-300 ${validationErrors.last_name_kana ? 'border-red-500' : ''}`}
+                                                value={data.last_name_kana}
+                                                onChange={e => setData('last_name_kana', e.target.value)} 
+                                            />
+                                            {validationErrors.last_name_kana && (
+                                                <p className="text-red-600 text-xs mt-1">{validationErrors.last_name_kana}</p>
+                                            )}
+                                        </div>
+                                        <div className="w-full">
+                                            <input 
+                                                type="text" 
+                                                placeholder="めい" 
+                                                className={`w-full border-stone-300 ${validationErrors.first_name_kana ? 'border-red-500' : ''}`}
+                                                value={data.first_name_kana}
+                                                onChange={e => setData('first_name_kana', e.target.value)} 
+                                            />
+                                            {validationErrors.first_name_kana && (
+                                                <p className="text-red-600 text-xs mt-1">{validationErrors.first_name_kana}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-bold mb-2">電話番号</label>
-                                    <input type="tel" placeholder="09012345678" className="w-full border-stone-300" onChange={e => setData('tel', e.target.value)} />
+                                    <label className="block text-sm font-bold mb-2">電話番号 <span className="text-red-600">*</span></label>
+                                    <input 
+                                        type="tel" 
+                                        placeholder="09012345678" 
+                                        className={`w-full border-stone-300 ${validationErrors.tel ? 'border-red-500' : ''}`}
+                                        value={data.tel}
+                                        onChange={e => setData('tel', e.target.value)} 
+                                    />
+                                    {validationErrors.tel && (
+                                        <p className="text-red-600 text-sm mt-2">{validationErrors.tel}</p>
+                                    )}
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold mb-2">メールアドレス</label>
-                                    <input type="email" placeholder="example@mail.com" className="w-full border-stone-300" onChange={e => setData('email', e.target.value)} />
+                                    <label className="block text-sm font-bold mb-2">メールアドレス <span className="text-red-600">*</span></label>
+                                    <input 
+                                        type="email" 
+                                        placeholder="example@mail.com" 
+                                        className={`w-full border-stone-300 ${validationErrors.email ? 'border-red-500' : ''}`}
+                                        value={data.email}
+                                        onChange={e => setData('email', e.target.value)} 
+                                    />
+                                    {validationErrors.email && (
+                                        <p className="text-red-600 text-sm mt-2">{validationErrors.email}</p>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="space-y-4">
-                                <label className="block text-sm font-bold">住所</label>
-                                <input type="text" placeholder="郵便番号（ハイフンなし）" className="w-1/3 border-stone-300 block" onChange={e => setData('zip_code', e.target.value)} />
-                                <input type="text" placeholder="都道府県・市区町村・番地" className="w-full border-stone-300" onChange={e => setData('address', e.target.value)} />
-                                <input type="text" placeholder="建物名・部屋番号" className="w-full border-stone-300" onChange={e => setData('building', e.target.value)} />
+                                <label className="block text-sm font-bold">住所 <span className="text-red-600">*</span></label>
+                                <div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="郵便番号（ハイフンなし）" 
+                                        className={`w-1/3 border-stone-300 block ${validationErrors.zip_code ? 'border-red-500' : ''}`}
+                                        value={data.zip_code}
+                                        onChange={e => setData('zip_code', e.target.value)} 
+                                    />
+                                    {validationErrors.zip_code && (
+                                        <p className="text-red-600 text-sm mt-1">{validationErrors.zip_code}</p>
+                                    )}
+                                </div>
+                                <div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="都道府県・市区町村・番地" 
+                                        className={`w-full border-stone-300 ${validationErrors.address ? 'border-red-500' : ''}`}
+                                        value={data.address}
+                                        onChange={e => setData('address', e.target.value)} 
+                                    />
+                                    {validationErrors.address && (
+                                        <p className="text-red-600 text-sm mt-1">{validationErrors.address}</p>
+                                    )}
+                                </div>
+                                <input 
+                                    type="text" 
+                                    placeholder="建物名・部屋番号" 
+                                    className="w-full border-stone-300" 
+                                    value={data.building}
+                                    onChange={e => setData('building', e.target.value)} 
+                                />
                             </div>
 
                             {/* 同意・会員登録の選択 */}
@@ -166,7 +421,7 @@ export default function Details({ auth, input, room, plan }: any) {
                             </div>
                         </div>
 
-                        {/* 5. お支払い方法 */}
+                        {/* 6. お支払い方法 */}
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-4 mb-6">お支払い方法の選択</h2>
                             <div className="space-y-4">
@@ -220,13 +475,13 @@ export default function Details({ auth, input, room, plan }: any) {
                             <h3 className="text-lg font-bold mb-6 border-b border-stone-600 pb-2 tracking-widest">料金内訳</h3>
                             <div className="space-y-4 text-sm mb-8">
                                 <div className="flex justify-between">
-                                    <span>大人 (¥{plan.price_per_person.toLocaleString()} × {data.adult_count}名)</span>
-                                    <span>¥{(plan.price_per_person * data.adult_count).toLocaleString()}</span>
+                                    <span>大人 (¥{pricePerPersonPerNight.toLocaleString()} × {data.adult_count}名 × {nights}泊)</span>
+                                    <span>¥{(pricePerPersonPerNight * data.adult_count * nights).toLocaleString()}</span>
                                 </div>
                                 {data.child_count > 0 && (
                                     <div className="flex justify-between">
-                                        <span>子供 (¥{(plan.price_per_person * 0.7).toLocaleString()} × {data.child_count}名)</span>
-                                        <span>¥{(plan.price_per_person * 0.7 * data.child_count).toLocaleString()}</span>
+                                        <span>子供 (¥{(pricePerPersonPerNight * 0.7).toLocaleString()} × {data.child_count}名 × {nights}泊)</span>
+                                        <span>¥{(pricePerPersonPerNight * 0.7 * data.child_count * nights).toLocaleString()}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between opacity-60 text-xs">

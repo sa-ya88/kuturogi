@@ -6,11 +6,11 @@ export default function Onsen() {
     return (
         <GuestLayout>
             <Head title="大浴場" />
-            
-            <section className="pt-32 pb-16 bg-stone-100">
+
+            <section className="pt-32 pb-16 bg-[#2d2a26] text-white">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <h1 className="text-4xl font-light tracking-[0.2em] mb-4">大浴場</h1>
-                    <p className="text-stone-500 tracking-widest">源泉掛け流し、心解き放つ癒しの湯。</p>
+                    <p className="text-stone-400 tracking-widest text-sm md:text-base">源泉掛け流し、心解き放つ癒しの湯。</p>
                 </div>
             </section>
 

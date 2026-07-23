@@ -1,121 +1,78 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
+    // 1. 入力項目をemailのみに設定
+    const { data, setData, post, processing, errors } = useForm({
         email: '',
-        password: '',
-        password_confirmation: '',
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
-        });
+        // 2. Inertiaのpostを使って、auth.phpに登録した名前付きルート「register.email」へ送信
+        post(route('register.email'));
     };
+
+    const inputClassName =
+        'mt-1 block w-full border-stone-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500';
 
     return (
         <GuestLayout>
-            <Head title="Register" />
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
+            <Head title="新規会員登録" />
+            <section className="pt-32 pb-16 bg-[#2d2a26] text-white">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                    <h1 className="text-4xl font-light tracking-[0.2em] mb-4">新規会員登録</h1>
+                    <p className="text-stone-400 tracking-widest text-sm md:text-base">メールアドレスをご入力いただくと、登録用URLを記載した認証メールをお送りします</p>
                 </div>
+            </section>
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
+            <section className="py-20 max-w-md mx-auto px-4">
+                <div className="bg-white border border-stone-200 p-8 shadow-sm">
+                    <form onSubmit={submit} className="space-y-6">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-stone-700">
+                                メールアドレス
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                name="email"
+                                value={data.email}
+                                autoComplete="username"
+                                autoFocus
+                                required
+                                onChange={(e) => setData('email', e.target.value)}
+                                className={inputClassName}
+                            />
+                            {errors.email && (
+                                <div className="text-red-600 text-sm mt-1">{errors.email}</div>
+                            )}
+                        </div>
 
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                    />
+                        <div className="pt-2">
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="w-full bg-stone-800 text-white py-3 tracking-widest hover:bg-stone-700 transition disabled:opacity-50"
+                            >
+                                {processing ? '送信中...' : '認証メールを送信する'}
+                            </button>
+                        </div>
+                    </form>
 
-                    <InputError message={errors.email} className="mt-2" />
+                    <div className="mt-8 pt-6 border-t border-stone-100 text-center text-sm text-stone-500">
+                        すでにアカウントをお持ちの方は
+                        <Link
+                            href={route('login')}
+                            className="text-amber-700 hover:text-amber-900 ml-1 transition"
+                        >
+                            ログイン
+                        </Link>
+                    </div>
                 </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
-                    <TextInput
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        required
-                    />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <Link
-                        href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Already registered?
-                    </Link>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
-                </div>
-            </form>
+            </section>
         </GuestLayout>
     );
 }

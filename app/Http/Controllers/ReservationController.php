@@ -61,6 +61,19 @@ class ReservationController extends Controller
     }
 
 
+    // 予約一覧（会員向け）
+    public function index(Request $request)
+    {
+        $reservations = Reservation::with(['plan', 'room'])
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->get();
+
+        return Inertia::render('Reservations/Index', [
+            'reservations' => $reservations,
+        ]);
+    }
+
     // 予約内容詳細画面
     public function details(Request $request)
     {
@@ -75,16 +88,23 @@ class ReservationController extends Controller
     public function confirm(Request $request)
     {
         $plan = Plan::find($request->plan_id);
+        $room = Room::find($request->room_id);
         // 宿泊日数の計算（最低1泊）
         $days = max(1, (strtotime($request->checkout_date) - strtotime($request->checkin_date)) / 86400);
+        // 1泊あたりの1人当たり料金
+        $pricePerPersonPerNight = $plan->price_per_person + $room->price_per_person;
         // 合計金額の計算
-        $total = $plan->price_per_person * ($request->adult_count + $request->child_count) * $days * $request->room_count;
+        $adultTotal = $pricePerPersonPerNight * $request->adult_count * $days;
+        $childTotal = ($pricePerPersonPerNight * 0.7) * $request->child_count * $days;
+        $total = ($adultTotal + $childTotal) * $request->room_count;
 
         return Inertia::render('Reservations/Confirm', [
             'input' => $request->all(),
-            'room' => Room::find($request->room_id),
+            'room' => $room,
             'plan' => $plan,
             'totalPrice' => $total,
+            'pricePerPersonPerNight' => $pricePerPersonPerNight,
+            'nights' => $days,
         ]);
     }
 
@@ -95,41 +115,81 @@ class ReservationController extends Controller
         $validated = $request->validate([
             'plan_id'       => 'required|exists:plans,id',
             'room_id'       => 'required|exists:rooms,id',
-            'checkin_date'  => 'required|date|after_or_equal:today',
-            'checkout_date' => 'required|date|after:checkin_date',
+            'checkin_date'  => 'nullable|date',
+            'check_in_date' => 'nullable|date',
+            'checkout_date' => 'nullable|date',
+            'check_out_date' => 'nullable|date',
             'adult_count'   => 'required|integer|min:1',
             'child_count'   => 'required|integer|min:0',
             'room_count'    => 'required|integer|min:1',
+            'last_name'     => 'required|string',
+            'first_name'    => 'required|string',
+            'last_name_kana' => 'required|string',
+            'first_name_kana' => 'required|string',
+            'tel'           => 'required|string',
+            'email'         => 'required|email',
+            'zip_code'      => 'required|string',
+            'address'       => 'required|string',
+            'building'      => 'nullable|string',
+            'payment_method' => 'required|in:local,credit',
+        ], [
+            'plan_id.required' => 'プランを選択してください',
+            'room_id.required' => 'お部屋を選択してください',
         ]);
 
         // 2. 料金計算（例：子供は大人料金の70%として計算）
-        $plan = \App\Models\Plan::findOrFail($validated['plan_id']);
-        $days = (strtotime($validated['checkout_date']) - strtotime($validated['checkin_date'])) / 86400;
+        $plan = Plan::findOrFail($validated['plan_id']);
+        $room = Room::findOrFail($validated['room_id']);
         
-        $adultPrice = $plan->price_per_person * $validated['adult_count'];
-        $childPrice = ($plan->price_per_person * 0.7) * $validated['child_count'];
+        // checkin_date と checkout_date を確認
+        $checkinDate = $validated['checkin_date'] ?? $validated['check_in_date'] ?? null;
+        $checkoutDate = $validated['checkout_date'] ?? $validated['check_out_date'] ?? null;
+        
+        if (!$checkinDate || !$checkoutDate) {
+            return redirect()->back()->withErrors(['dates' => 'チェックイン日とチェックアウト日を入力してください']);
+        }
+        
+        $days = max(1, (strtotime($checkoutDate) - strtotime($checkinDate)) / 86400);
+        
+        $pricePerPersonPerNight = $plan->price_per_person + $room->price_per_person;
+        $adultPrice = $pricePerPersonPerNight * $validated['adult_count'];
+        $childPrice = ($pricePerPersonPerNight * 0.7) * $validated['child_count'];
         
         $totalPrice = ($adultPrice + $childPrice) * $days * $validated['room_count'];
 
         // 3. 保存
-        \App\Models\Reservation::create([
-            'user_id'       => auth()->id(),
+        $reservationData = [
+            'user_id'       => auth()->id(), // ゲストユーザーの場合は NULL
             'plan_id'       => $validated['plan_id'],
-            'room_id'       => $validated['room_id'], // RoomIDも保存
-            'checkin_date'  => $validated['checkin_date'],
-            'checkout_date' => $validated['checkout_date'],
+            'room_id'       => $validated['room_id'],
+            'checkin_date'  => $checkinDate,
+            'checkout_date' => $checkoutDate,
             'guest_count'   => $validated['adult_count'] + $validated['child_count'],
             'total_price'   => $totalPrice,
             'status'        => 'confirmed',
-        ]);
+            'payment_method' => $validated['payment_method'],
+        ];
 
-        // 4.部屋在庫を減らす
-        DB::transaction(function () use ($request) {
+        // ゲストユーザーの場合、個人情報も保存
+        if (!auth()->check()) {
+            $reservationData['guest_name'] = $validated['last_name'] . ' ' . $validated['first_name'];
+            $reservationData['guest_name_kana'] = $validated['last_name_kana'] . ' ' . $validated['first_name_kana'];
+            $reservationData['guest_tel'] = $validated['tel'];
+            $reservationData['guest_email'] = $validated['email'];
+            $reservationData['guest_zip_code'] = $validated['zip_code'];
+            $reservationData['guest_address'] = $validated['address'];
+            $reservationData['guest_building'] = $validated['building'] ?? '';
+        }
+
+        Reservation::create($reservationData);
+
+        // 4. 部屋在庫を減らす
+        DB::transaction(function () use ($request, $checkinDate, $checkoutDate) {
             // 宿泊期間（チェックアウト日は含まない）の各日付を取得
             $period = new \DatePeriod(
-                new \DateTime($request->checkin_date),
+                new \DateTime($checkinDate),
                 new \DateInterval('P1D'),
-                new \DateTime($request->checkout_date)
+                new \DateTime($checkoutDate)
             );
 
             foreach ($period as $date) {
@@ -150,7 +210,7 @@ class ReservationController extends Controller
             }
         });
 
-        return redirect()->route('top')->with('success', 'ご予約が完了いたしました。');
+        return redirect()->route('reservations.thanks')->with('success', 'ご予約が完了いたしました。');
 
     }
 }

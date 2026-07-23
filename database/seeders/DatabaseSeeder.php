@@ -26,8 +26,8 @@ class DatabaseSeeder extends Seeder
         // 2. 各マスターデータの作成（RoomInventoryは最後にするのでここでは外す）
         $this->call([
             NewsSeeder::class,
-            PlanSeeder::class,    
             RoomSeeder::class,
+            PlanSeeder::class,
         ]);
 
         // 全ての部屋とプランのIDを取得

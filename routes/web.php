@@ -1,11 +1,9 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ContactController;
-use Illuminate\Http\Request;
 use App\Http\Controllers\ReservationController;
 
 Route::get('/', function () {
@@ -33,11 +31,14 @@ Route::get('/rooms/{room}', function (App\Models\Room $room) {
 // ① プラン選択画面（既存）
 Route::get('/reservations/create', [ReservationController::class, 'create'])->name('reservations.create');
 // ② 予約内容詳細画面（プラン詳細や人数入力・内訳）
-Route::post('/reservations/details', [ReservationController::class, 'details'])->name('reservations.details');
+Route::match(['get', 'post'], '/reservations/details', [ReservationController::class, 'details'])->name('reservations.details');
 // ③ 最終確認画面
 Route::post('/reservations/confirm', [ReservationController::class, 'confirm'])->name('reservations.confirm');
 // ④ 予約実行 ＆ 完了画面表示
 Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
+Route::middleware('auth')->group(function () {
+    Route::get('/reservations', [ReservationController::class, 'index'])->name('reservations.index');
+});
 Route::get('/reservations/thanks', function() {
     return Inertia::render('Reservations/Thanks');
 })->name('reservations.thanks');
@@ -45,32 +46,26 @@ Route::get('/reservations/thanks', function() {
 Route::get('/onsen', function () { return Inertia::render('Onsen'); })->name('onsen');
 Route::get('/food', function () { return Inertia::render('Food'); })->name('food');
 Route::get('/sightseeing', function () { return Inertia::render('Sightseeing'); })->name('sightseeing');
-Route::get('/news', function () { return Inertia::render('News/Index'); })->name('news');
+Route::get('/news', function () { 
+    return Inertia::render('News/Index', [
+        'news' => App\Models\News::latest('published_at')->get()
+    ]); 
+})->name('news');
 Route::get('/access', function () { return Inertia::render('Access'); })->name('access');
 Route::get('/company', function () { return Inertia::render('Company'); })->name('company');
 Route::get('/faq', function () { return Inertia::render('Faq'); })->name('faq');
 
-// 19行目〜20行目をこれに書き換えてください
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
 Route::post('/contact', 'App\Http\Controllers\ContactController@send')->name('contact.send');
 
-// Route::get('/', function () {
-//     return Inertia::render('Welcome', [
-//         'canLogin' => Route::has('login'),
-//         'canRegister' => Route::has('register'),
-//         'laravelVersion' => Application::VERSION,
-//         'phpVersion' => PHP_VERSION,
-//     ]);
-// });
+Route::middleware('auth')->group(function () {
+    // 会員情報の確認・変更画面（GET）
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
 
-// Route::get('/dashboard', function () {
-//     return Inertia::render('Dashboard');
-// })->middleware(['auth', 'verified'])->name('dashboard');
-
-// Route::middleware('auth')->group(function () {
-//     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-//     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-//     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-// });
+    // 会員情報の更新処理（PATCH または PUT）
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+});
 
 require __DIR__.'/auth.php';

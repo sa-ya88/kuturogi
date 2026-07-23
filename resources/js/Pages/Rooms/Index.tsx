@@ -16,10 +16,10 @@ export default function Index({ rooms }: { rooms: Room[] }) {
             <Head title="お部屋一覧" />
 
             {/* ヒーローエリア */}
-            <section className="pt-32 pb-16 bg-stone-100">
+            <section className="pt-32 pb-16 bg-[#2d2a26] text-white">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <h1 className="text-4xl font-light tracking-[0.2em] mb-4">お部屋</h1>
-                    <p className="text-stone-500 tracking-widest">四季を愛で、時に浸る、寛ぎの空間。</p>
+                    <p className="text-stone-400 tracking-widest text-sm md:text-base">四季を愛で、時に浸る、寛ぎの空間。</p>
                 </div>
             </section>
 

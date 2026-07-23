@@ -2,20 +2,67 @@ import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 
+// 日付を指定日数分進める/戻す ヘルパー関数
+const addDays = (dateStr: string, days: number): string => {
+    const date = new Date(dateStr);
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+};
+
+// 今日の日付を YYYY-MM-DD 形式で取得
+const getTodayDate = (): string => {
+    return new Date().toISOString().split('T')[0];
+};
+
 export default function Create({ rooms, selectedRoomId }: any) {
 
     const { post, processing, errors } = useForm({});
     
+    const today = getTodayDate();
+    const tomorrow = addDays(today, 1);
+    
     const [searchQuery, setSearchQuery] = useState({
         room_id: selectedRoomId || '',
-        checkin: '',
-        checkout: '',
+        checkin: today,
+        checkout: tomorrow,
         adults: 2,
         children: 0,
         room_count: 1,
     });
 
     const [modalPlan, setModalPlan] = useState<any>(null);
+
+    const handleCheckinChange = (value: string) => {
+        let newCheckout = searchQuery.checkout;
+        
+        // checkoutが空の場合、checkinの翌日を自動設定
+        if (value && !newCheckout) {
+            newCheckout = addDays(value, 1);
+        } else if (value && newCheckout) {
+            // checkoutがcheckIn以前の場合、checkoutをcheckinの翌日に設定
+            if (new Date(newCheckout) <= new Date(value)) {
+                newCheckout = addDays(value, 1);
+            }
+        }
+        
+        setSearchQuery({ ...searchQuery, checkin: value, checkout: newCheckout });
+    };
+
+    const handleCheckoutChange = (value: string) => {
+        let newCheckin = searchQuery.checkin;
+        
+        // checkinが空の場合、checkoutの前日を自動設定
+        if (value && !newCheckin) {
+            newCheckin = addDays(value, -1);
+        } else if (value && newCheckin) {
+            // checkinがcheckoutと同日以降の場合、checkinをcheckoutの前日に設定
+            if (new Date(newCheckin) >= new Date(value)) {
+                newCheckin = addDays(value, -1);
+            }
+        }
+        
+        setSearchQuery({ ...searchQuery, checkin: newCheckin, checkout: value });
+    };
 
     const handleReserve = (planId: number, roomId: number) => {
         post(route('reservations.details', {
@@ -31,6 +78,11 @@ export default function Create({ rooms, selectedRoomId }: any) {
     
     const groupedPlans = useMemo(() => {
         const groups: any = {};
+
+        // 宿泊日数を計算（日付が指定されていない場合は1泊と仮定）
+        const nights = (searchQuery.checkin && searchQuery.checkout) 
+            ? Math.max(1, Math.floor((new Date(searchQuery.checkout).getTime() - new Date(searchQuery.checkin).getTime()) / (1000 * 60 * 60 * 24)))
+            : 1;
 
         // 1. 各部屋にぶら下がっているプランをループ
         rooms.forEach((room: any) => {
@@ -56,7 +108,7 @@ export default function Create({ rooms, selectedRoomId }: any) {
                     room_id: room.id,
                     room_name: room.name,
                     room_image: room.images?.[0] || '/images/no-image.webp',
-                    price: (Number(room.price_per_person) || 0) + (Number(plan.price_per_person) || 0),
+                    price: ((Number(room.price_per_person) || 0) + (Number(plan.price_per_person) || 0)) * nights,
                     is_available: hasStock,
                     remains: room.current_inventory
                 });
@@ -73,9 +125,8 @@ export default function Create({ rooms, selectedRoomId }: any) {
             );
         }
 
-        console.log("Grouped Result:", result); // ブラウザのコンソールでこれが出るか確認
         return result;
-    }, [rooms, searchQuery.room_id, searchQuery.room_count]);
+    }, [rooms, searchQuery.room_id, searchQuery.room_count, searchQuery.checkin, searchQuery.checkout]);
 
 
     return (
@@ -103,9 +154,9 @@ export default function Create({ rooms, selectedRoomId }: any) {
                         <div className="flex items-center gap-3 border-l border-stone-600 pl-8">
                             <span className="opacity-70 font-bold">ご宿泊日程</span>
                             <div className="flex items-center gap-2">
-                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkin} onChange={e => setSearchQuery({...searchQuery, checkin: e.target.value})} />
+                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkin} onChange={e => handleCheckinChange(e.target.value)} />
                                 <span className="mx-1">〜</span>
-                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkout} onChange={e => setSearchQuery({...searchQuery, checkout: e.target.value})} />
+                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkout} onChange={e => handleCheckoutChange(e.target.value)} />
                             </div>
                         </div>
 
@@ -130,7 +181,7 @@ export default function Create({ rooms, selectedRoomId }: any) {
 
                         {/* ボタン類 */}
                         <div className="flex gap-3 ml-auto">
-                            <button className="bg-stone-600 px-6 h-10 rounded hover:bg-stone-500 transition-colors font-medium" onClick={() => setSearchQuery({room_id: '', checkin: '', checkout: '', adults: 2, children: 0, room_count: 1})}>クリア</button>
+                            <button className="bg-stone-600 px-6 h-10 rounded hover:bg-stone-500 transition-colors font-medium" onClick={() => setSearchQuery({room_id: '', checkin: today, checkout: tomorrow, adults: 2, children: 0, room_count: 1})}>クリア</button>
                             <button className="bg-amber-700 px-10 h-10 rounded hover:bg-amber-600 transition-colors font-bold tracking-widest shadow-lg">再検索</button>
                         </div>
                     </div>
