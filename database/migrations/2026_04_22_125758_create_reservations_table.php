@@ -15,20 +15,20 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->nullable();
             $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('room_id')->after('plan_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
             $table->date('checkin_date');   // チェックイン日
             $table->date('checkout_date');  // チェックアウト日
             $table->integer('guest_count'); // 宿泊人数
             $table->integer('total_price'); // 合計金額
             $table->string('status')->default('pending'); // 予約状態（確定・キャンセル待ち等）
-            $table->string('guest_name')->nullable()->after('status');
-            $table->string('guest_name_kana')->nullable()->after('guest_name');
-            $table->string('guest_tel')->nullable()->after('guest_name_kana');
-            $table->string('guest_email')->nullable()->after('guest_tel');
-            $table->string('guest_zip_code')->nullable()->after('guest_email');
-            $table->string('guest_address')->nullable()->after('guest_zip_code');
-            $table->string('guest_building')->nullable()->after('guest_address');
-            $table->string('payment_method')->nullable()->after('guest_building');
+            $table->string('guest_name')->nullable();
+            $table->string('guest_name_kana')->nullable();
+            $table->string('guest_tel')->nullable();
+            $table->string('guest_email')->nullable();
+            $table->string('guest_zip_code')->nullable();
+            $table->string('guest_address')->nullable();
+            $table->string('guest_building')->nullable();
+            $table->string('payment_method')->nullable();
             $table->timestamps();
         });
     }
