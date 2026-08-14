@@ -18,6 +18,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'name_kana' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
                 'string',
@@ -26,6 +27,10 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'birthday' => ['required', 'date'],
+            'gender' => ['required', 'string', 'max:255'],
+            'zip_code' => ['required', 'string', 'max:10'],
+            'address' => ['required', 'string', 'max:255'],
         ];
     }
 }

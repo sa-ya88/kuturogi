@@ -21,6 +21,8 @@ services:
   db:
     image: mariadb:10.4
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - mariadb-data:/var/lib/mysql
     environment:

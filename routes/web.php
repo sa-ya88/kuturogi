@@ -16,24 +16,30 @@ Route::get('/', function () {
 // 1. お部屋一覧ページ (これが抜けているか、URLが間違っている可能性があります)
 Route::get('/rooms', function () {
     return Inertia::render('Rooms/Index', [
-        'rooms' => App\Models\Room::all()
+        'rooms' => App\Models\Room::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
     ]);
 })->name('rooms');
 
 // 2. お部屋詳細ページ
 Route::get('/rooms/{room}', function (App\Models\Room $room) {
+    abort_unless($room->is_active, 404);
+
     return Inertia::render('Rooms/Show', [
         // plans も一緒に読み込む設定
         'room' => $room->load('plans')
     ]);
 })->name('rooms.show');
 
+Route::post('/reservations/quote', [\App\Http\Controllers\ReservationQuoteController::class, '__invoke'])->name('reservations.quote');
+Route::get('/reservations/pricing-meta', [\App\Http\Controllers\ReservationQuoteController::class, 'meta'])->name('reservations.pricing-meta');
+Route::post('/reservations/payment-intent', [\App\Http\Controllers\ReservationPaymentIntentController::class, '__invoke'])->name('reservations.payment-intent');
+
 // ① プラン選択画面（既存）
 Route::get('/reservations/create', [ReservationController::class, 'create'])->name('reservations.create');
 // ② 予約内容詳細画面（プラン詳細や人数入力・内訳）
 Route::match(['get', 'post'], '/reservations/details', [ReservationController::class, 'details'])->name('reservations.details');
-// ③ 最終確認画面
-Route::post('/reservations/confirm', [ReservationController::class, 'confirm'])->name('reservations.confirm');
+// ③ 最終確認画面（GET: 再表示 / Stripe return_url 用。POST: Details からの遷移）
+Route::match(['get', 'post'], '/reservations/confirm', [ReservationController::class, 'confirm'])->name('reservations.confirm');
 // ④ 予約実行 ＆ 完了画面表示
 Route::post('/reservations', [ReservationController::class, 'store'])->name('reservations.store');
 Route::middleware('auth')->group(function () {

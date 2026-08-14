@@ -28,8 +28,7 @@ class RoomInventorySeeder extends Seeder
                         'date'    => $currentDate->format('Y-m-d'),
                     ],
                     [
-                        // 初期在庫数は部屋の基本設定（あれば）か、固定値（例: 5室）を入れる
-                        'remains' => 5, 
+                        'remains' => $room->stock_count ?? 5,
                     ]
                 );
                 $currentDate->addDay();

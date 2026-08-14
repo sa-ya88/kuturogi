@@ -1,6 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
@@ -10,13 +10,14 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
-export default function Details({ auth, input, room, plan }: any) {
+export default function Details({ auth, input, room, plan, optionFees = [], cancelPolicy = [] }: any) {
     const sliderImagesPlan = plan.images?.length ? plan.images : ['/images/room1.webp'];
     const shouldUseSwiperPlan = sliderImagesPlan.length > 1;
     const sliderImagesRoom = room.images?.length ? room.images : ['/images/room1.webp'];
     const shouldUseSwiperRoom = sliderImagesRoom.length > 1;
+    const choiceOptions = plan?.choice_options ?? [];
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         ...input,
         check_in_date: input?.check_in_date || input?.checkin_date || '',
         check_out_date: input?.check_out_date || input?.checkout_date || '',
@@ -35,13 +36,28 @@ export default function Details({ auth, input, room, plan }: any) {
         email_magazine: false,
         register_membership: false,
         payment_method: 'local', // local(現地決済) or credit(カード)
-        card_number: '',
-        card_expiry: '',
-        card_cvc: '',
+        selected_choices: choiceOptions.map((_: any, index: number) => input?.selected_choices?.[index] ?? ''),
+        selected_option_ids: Array.isArray(input?.selected_option_ids) ? input.selected_option_ids : [],
+        representatives: Array.from(
+            { length: Math.max(1, Number(input?.room_count) || 1) },
+            (_, index) => input?.representatives?.[index] ?? '',
+        ),
     });
+
+    useEffect(() => {
+        const count = Math.max(1, Number(data.room_count) || 1);
+        const next = Array.from({ length: count }, (_, index) => data.representatives?.[index] ?? '');
+        const same =
+            data.representatives?.length === next.length &&
+            data.representatives.every((value: string, index: number) => value === next[index]);
+        if (!same) {
+            setData('representatives', next);
+        }
+    }, [data.room_count]);
 
     // バリデーションエラー用のローカルstate
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [quote, setQuote] = useState<any>(null);
 
     // 宿泊日数を計算
     const nights = useMemo(() => {
@@ -51,13 +67,77 @@ export default function Details({ auth, input, room, plan }: any) {
         return 1;
     }, [data.check_in_date, data.check_out_date]);
 
-    // 料金の計算（一泊あたりの合計）
-    const pricePerPersonPerNight = plan.price_per_person + room.price_per_person;
-    const totalPrice = useMemo(() => {
-        const adultTotal = pricePerPersonPerNight * data.adult_count;
-        const childTotal = (pricePerPersonPerNight * 0.7) * data.child_count; // 子供は7割計算
-        return (adultTotal + childTotal) * data.room_count * nights;
-    }, [data, plan, room, nights]);
+    const pricePerPersonPerNight = quote?.base_per_person_per_night
+        ?? (plan.price_per_person + room.price_per_person);
+    const totalPrice = quote?.total ?? 0;
+    const childPercent = quote?.child_percent ?? 70;
+
+    useEffect(() => {
+        if (!data.check_in_date || !data.check_out_date || !room?.id || !plan?.id) {
+            return;
+        }
+        if (new Date(data.check_in_date) >= new Date(data.check_out_date)) {
+            return;
+        }
+
+        const controller = new AbortController();
+        const timer = window.setTimeout(async () => {
+            try {
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+                const response = await fetch(route('reservations.quote'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        plan_id: plan.id,
+                        room_id: room.id,
+                        checkin_date: data.check_in_date,
+                        checkout_date: data.check_out_date,
+                        adult_count: Number(data.adult_count) || 1,
+                        child_count: Number(data.child_count) || 0,
+                        room_count: Number(data.room_count) || 1,
+                        selected_option_ids: data.selected_option_ids ?? [],
+                    }),
+                    signal: controller.signal,
+                });
+                if (!response.ok) {
+                    return;
+                }
+                setQuote(await response.json());
+            } catch (error: any) {
+                if (error?.name !== 'AbortError') {
+                    console.error(error);
+                }
+            }
+        }, 250);
+
+        return () => {
+            controller.abort();
+            window.clearTimeout(timer);
+        };
+    }, [
+        data.check_in_date,
+        data.check_out_date,
+        data.adult_count,
+        data.child_count,
+        data.room_count,
+        data.selected_option_ids,
+        plan?.id,
+        room?.id,
+    ]);
+
+    const toggleOption = (optionId: number) => {
+        const current = Array.isArray(data.selected_option_ids) ? data.selected_option_ids : [];
+        if (current.includes(optionId)) {
+            setData('selected_option_ids', current.filter((id: number) => id !== optionId));
+        } else {
+            setData('selected_option_ids', [...current, optionId]);
+        }
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,6 +187,27 @@ export default function Details({ auth, input, room, plan }: any) {
         if (!data.address?.trim()) {
             newErrors.address = '住所を入力してください';
         }
+
+        const roomCount = Math.max(1, Number(data.room_count) || 1);
+        const primaryName = `${data.last_name?.trim() ?? ''} ${data.first_name?.trim() ?? ''}`.trim();
+        const representatives = Array.from({ length: roomCount }, (_, index) => {
+            if (index === 0) {
+                return (data.representatives?.[index] || primaryName).trim();
+            }
+            return (data.representatives?.[index] ?? '').trim();
+        });
+
+        representatives.forEach((name, index) => {
+            if (!name) {
+                newErrors[`representatives_${index}`] = `${index + 1}室目の代表者名を入力してください`;
+            }
+        });
+
+        choiceOptions.forEach((option: any, index: number) => {
+            if (!data.selected_choices?.[index]?.trim()) {
+                newErrors[`selected_choices_${index}`] = `「${option.prompt}」を選択してください`;
+            }
+        });
         
         if (Object.keys(newErrors).length > 0) {
             setValidationErrors(newErrors);
@@ -114,6 +215,10 @@ export default function Details({ auth, input, room, plan }: any) {
         }
         
         setValidationErrors({});
+        transform((formData) => ({
+            ...formData,
+            representatives,
+        }));
         post(route('reservations.confirm'));
     };
 
@@ -214,9 +319,12 @@ export default function Details({ auth, input, room, plan }: any) {
 
                             <h2 className="font-bold border-b pb-2 mb-4 mt-10">キャンセルポリシー</h2>
                             <p className="text-xs text-red-600 leading-loose">
-                                3日前から：宿泊料金の30%<br />
-                                前日：宿泊料金の50%<br />
-                                当日・不泊：宿泊料金の100%
+                                {(cancelPolicy?.length ? cancelPolicy : ['キャンセルポリシーは準備中です']).map((line: string) => (
+                                    <span key={line}>
+                                        {line}
+                                        <br />
+                                    </span>
+                                ))}
                             </p>
                         </div>
 
@@ -265,9 +373,12 @@ export default function Details({ auth, input, room, plan }: any) {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm">部屋数</span>
-                                    <input type="number" value={data.room_count} onChange={e => setData('room_count', parseInt(e.target.value))} className="w-20 border-stone-300" />
+                                    <input type="number" min={1} value={data.room_count} onChange={e => setData('room_count', Math.max(1, parseInt(e.target.value) || 1))} className="w-20 border-stone-300" />
                                 </div>
                             </div>
+                            <p className="text-xs text-stone-500 text-center mt-4">
+                                複数室のご予約は同一プラン・各室同じ人数の場合のみ可能です。各部屋に代表者名が必要です。
+                            </p>
                         </div>
 
                         {/* 5. お客様情報の入力 */}
@@ -341,6 +452,34 @@ export default function Details({ auth, input, room, plan }: any) {
                                     </div>
                                 </div>
                             </div>
+
+                            {Number(data.room_count) > 1 && (
+                                <div className="space-y-4 border-t pt-6">
+                                    <h3 className="text-sm font-bold tracking-widest">各部屋の代表者名 <span className="text-red-600">*</span></h3>
+                                    <p className="text-xs text-stone-500">1室目は上記お名前を初期値にできます。2室目以降は各部屋の代表者名を入力してください。</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {Array.from({ length: Math.max(1, Number(data.room_count) || 1) }).map((_, index) => (
+                                            <div key={`representative-${index}`}>
+                                                <label className="block text-xs text-stone-500 mb-1">{index + 1}室目</label>
+                                                <input
+                                                    type="text"
+                                                    className={`w-full border-stone-300 ${validationErrors[`representatives_${index}`] ? 'border-red-500' : ''}`}
+                                                    value={data.representatives?.[index] ?? ''}
+                                                    placeholder={index === 0 ? '未入力の場合は上記お名前を使用' : '代表者名'}
+                                                    onChange={(e) => {
+                                                        const next = [...(data.representatives ?? [])];
+                                                        next[index] = e.target.value;
+                                                        setData('representatives', next);
+                                                    }}
+                                                />
+                                                {validationErrors[`representatives_${index}`] && (
+                                                    <p className="text-red-600 text-xs mt-1">{validationErrors[`representatives_${index}`]}</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -421,6 +560,66 @@ export default function Details({ auth, input, room, plan }: any) {
                             </div>
                         </div>
 
+                        {choiceOptions.length > 0 && (
+                            <div className="bg-white border p-8 space-y-6">
+                                <h2 className="text-lg font-bold border-b pb-4">プランの選択項目</h2>
+                                {choiceOptions.map((option: any, index: number) => (
+                                    <div key={index}>
+                                        <label className="block text-sm font-bold mb-2">
+                                            {option.prompt} <span className="text-red-600">*</span>
+                                        </label>
+                                        <select
+                                            value={data.selected_choices[index] ?? ''}
+                                            onChange={(e) => {
+                                                const next = [...(data.selected_choices ?? [])];
+                                                next[index] = e.target.value;
+                                                setData('selected_choices', next);
+                                            }}
+                                            className={`w-full border-stone-300 ${validationErrors[`selected_choices_${index}`] ? 'border-red-500' : ''}`}
+                                        >
+                                            <option value="">選択してください</option>
+                                            {(option.choices ?? []).map((choice: any, choiceIndex: number) => (
+                                                <option key={choiceIndex} value={choice.label}>
+                                                    {choice.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {validationErrors[`selected_choices_${index}`] && (
+                                            <p className="text-red-600 text-sm mt-2">{validationErrors[`selected_choices_${index}`]}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {optionFees?.length > 0 && (
+                            <div className="bg-white border p-8">
+                                <h2 className="text-lg font-bold border-b pb-4 mb-6">オプション</h2>
+                                <div className="space-y-3">
+                                    {optionFees.map((option: any) => (
+                                        <label key={option.id} className="flex items-start gap-3 p-4 border cursor-pointer hover:bg-stone-50">
+                                            <input
+                                                type="checkbox"
+                                                checked={(data.selected_option_ids ?? []).includes(option.id)}
+                                                onChange={() => toggleOption(option.id)}
+                                                className="mt-1 text-stone-800"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="flex justify-between gap-4">
+                                                    <span className="font-bold">{option.name}</span>
+                                                    <span>¥{Number(option.price).toLocaleString()}</span>
+                                                </div>
+                                                {option.description && (
+                                                    <p className="text-xs text-stone-500 mt-1">{option.description}</p>
+                                                )}
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-stone-500 mt-4">予約1件あたりの定額です（泊数・室数に関係なく1回）</p>
+                            </div>
+                        )}
+
                         {/* 6. お支払い方法 */}
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-4 mb-6">お支払い方法の選択</h2>
@@ -436,32 +635,21 @@ export default function Details({ auth, input, room, plan }: any) {
                                     <input type="radio" name="payment" value="credit" checked={data.payment_method === 'credit'} onChange={e => setData('payment_method', e.target.value)} className="text-stone-800" />
                                     <div>
                                         <span className="font-bold">クレジットカード（オンライン決済）</span>
-                                        <p className="text-xs text-stone-500">今すぐオンラインで決済を完了します。</p>
+                                        <p className="text-xs text-stone-500">次の確認画面でカード情報を入力し、与信（仮売上）を行います。チェックイン時に売上確定します。</p>
                                     </div>
                                 </label>
                             </div>
 
                             {data.payment_method === 'credit' && (
-                                <div className="mt-6 p-6 bg-stone-50 border space-y-4 animate-fade-in">
-                                    <input type="text" placeholder="カード番号" className="w-full border-stone-300" onChange={e => setData('card_number', e.target.value)} />
-                                    <div className="flex gap-4">
-                                        <input type="text" placeholder="有効期限 (MM/YY)" className="w-1/2 border-stone-300" onChange={e => setData('card_expiry', e.target.value)} />
-                                        <input type="text" placeholder="CVC" className="w-1/2 border-stone-300" onChange={e => setData('card_cvc', e.target.value)} />
-                                    </div>
-                                    {/* クレジットカード入力欄のすぐ下、またはお支払いセクションの末尾に追加 */}
-                                    <div className="mt-8 p-6 bg-stone-50 border-l-2 border-stone-300">
-                                        <h3 className="text-xs font-bold text-stone-800 mb-3 tracking-widest uppercase">お支払いに関する注意事項</h3>
-                                        <ul className="text-[11px] text-stone-600 space-y-2 list-disc list-inside leading-relaxed">
-                                            <li>オンラインカード決済は、ご予約完了と同時に決済が実行されます。</li>
-                                            <li>ご利用いただけるカードは、VISA、Mastercard、JCB、AMEX、Dinersとなります。</li>
-                                            <li>当サイトではSSL暗号化通信により、お客様のカード情報を安全に保護しております。</li>
-                                            <li>予約内容の変更により差額が生じた場合は、一度全額返金の上、再決済となる場合がございます。</li>
-                                            <li>キャンセル規定に基づきキャンセル料が発生する場合、登録済みのカードより自動的に引き落としさせていただきます。</li>
-                                            <li>デビットカードやプリペイド式カードをご利用の場合、一時的に二重引き落としが生じる可能性があるため推奨しておりません。</li>
-                                            <li>領収書はチェックアウト時、またはオンライン上のマイページより発行が可能です。</li>
-                                            <li>現地決済をご選択の場合でも、ご予約の保証としてクレジットカード情報の入力を求める場合がございます。</li>
-                                        </ul>
-                                    </div>
+                                <div className="mt-6 p-6 bg-stone-50 border-l-2 border-stone-300">
+                                    <h3 className="text-xs font-bold text-stone-800 mb-3 tracking-widest uppercase">お支払いに関する注意事項</h3>
+                                    <ul className="text-[11px] text-stone-600 space-y-2 list-disc list-inside leading-relaxed">
+                                        <li>カード情報は次の確認画面で Stripe の安全な入力フォームへご入力ください。</li>
+                                        <li>予約確定時は与信（仮売上）のみ行い、チェックイン時に売上を確定します。</li>
+                                        <li>ご利用いただけるカードは、VISA、Mastercard、JCB、AMEX、Dinersとなります。</li>
+                                        <li>キャンセル規定に基づきキャンセル料が発生する場合、登録済みのカードより引き落としさせていただくことがあります。</li>
+                                        <li>デビットカードやプリペイド式カードをご利用の場合、一時的に二重引き落としが生じる可能性があるため推奨しておりません。</li>
+                                    </ul>
                                 </div>
                             )}
                         </div>
@@ -475,22 +663,35 @@ export default function Details({ auth, input, room, plan }: any) {
                             <h3 className="text-lg font-bold mb-6 border-b border-stone-600 pb-2 tracking-widest">料金内訳</h3>
                             <div className="space-y-4 text-sm mb-8">
                                 <div className="flex justify-between">
-                                    <span>大人 (¥{pricePerPersonPerNight.toLocaleString()} × {data.adult_count}名 × {nights}泊)</span>
-                                    <span>¥{(pricePerPersonPerNight * data.adult_count * nights).toLocaleString()}</span>
+                                    <span>大人 (¥{Number(pricePerPersonPerNight).toLocaleString()} × {data.adult_count}名 × {nights}泊)</span>
+                                    <span>¥{Number(quote?.nights?.reduce((sum: number, n: any) => sum + (n.adult_amount || 0), 0) ?? (pricePerPersonPerNight * data.adult_count * nights * data.room_count)).toLocaleString()}</span>
                                 </div>
                                 {data.child_count > 0 && (
                                     <div className="flex justify-between">
-                                        <span>子供 (¥{(pricePerPersonPerNight * 0.7).toLocaleString()} × {data.child_count}名 × {nights}泊)</span>
-                                        <span>¥{(pricePerPersonPerNight * 0.7 * data.child_count * nights).toLocaleString()}</span>
+                                        <span>子供 {childPercent}% (¥{Math.round(pricePerPersonPerNight * childPercent / 100).toLocaleString()} × {data.child_count}名 × {nights}泊)</span>
+                                        <span>¥{Number(quote?.nights?.reduce((sum: number, n: any) => sum + (n.child_amount || 0), 0) ?? 0).toLocaleString()}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between opacity-60 text-xs">
                                     <span>部屋数</span>
                                     <span>× {data.room_count}室</span>
                                 </div>
+                                {(quote?.summary_adjustments ?? []).length > 0 && (
+                                    <div className="text-xs text-amber-200 space-y-1">
+                                        {(quote.summary_adjustments as string[]).map((label) => (
+                                            <p key={label}>※ {label}</p>
+                                        ))}
+                                    </div>
+                                )}
+                                {(quote?.selected_options ?? []).map((option: any) => (
+                                    <div key={option.id} className="flex justify-between text-xs">
+                                        <span>オプション: {option.name}</span>
+                                        <span>¥{Number(option.price).toLocaleString()}</span>
+                                    </div>
+                                ))}
                                 <div className="border-t border-stone-600 pt-4 flex justify-between items-end">
                                     <span className="text-xs">合計金額 (税込)</span>
-                                    <span className="text-2xl font-serif text-amber-400">¥{totalPrice.toLocaleString()}</span>
+                                    <span className="text-2xl font-serif text-amber-400">¥{Number(totalPrice).toLocaleString()}</span>
                                 </div>
                             </div>
                             <button 

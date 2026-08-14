@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\RegistrationMagicLink;
+use App\Services\IntegrationWebhookDispatcher;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -90,6 +91,17 @@ class RegisteredUserController extends Controller
         ]);
 
         event(new Registered($user));
+
+        app(IntegrationWebhookDispatcher::class)->dispatch('user.registered', [
+            'id' => $user->id,
+            'name' => $user->name,
+            'name_kana' => $user->name_kana,
+            'email' => $user->email,
+            'birthday' => $user->birthday,
+            'gender' => $user->gender,
+            'zip_code' => $user->zip_code,
+            'address' => $user->address,
+        ]);
 
         Auth::login($user);
 
