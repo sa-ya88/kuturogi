@@ -25,6 +25,7 @@ class Reservation extends Model
         'authorized_at', 'paid_at', 'refunded_at',
         'cancel_fee_amount', 'stripe_cancel_fee_payment_intent_id', 'cancel_fee_uncollected',
         'selected_choices', 'selected_option_fees',
+        'source', 'stay_status', 'customer_id', 'kuturogi_reservation_id',
     ];
 
     protected function casts(): array

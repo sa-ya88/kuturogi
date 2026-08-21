@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\RegistrationMagicLink;
 use App\Services\IntegrationWebhookDispatcher;
+use App\Support\UserIntegrationPayload;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,13 +34,16 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-        public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
+        if ($redirect = $this->closedRegistrationRedirect()) {
+            return $redirect;
+        }
         $request->validate([
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
         ]);
 
-        Log::channel('single')->info('★仮登録ボタンが押されました！メールアドレス: ' . $request->email);
+        Log::info('Registration magic link requested.');
 
         Notification::route('mail', $request->email)
             ->notify(new RegistrationMagicLink($request->email));
@@ -49,11 +53,23 @@ class RegisteredUserController extends Controller
     }
 
 
+    public function sent(): Response|RedirectResponse
+    {
+        if ($redirect = $this->closedRegistrationRedirect()) {
+            return $redirect;
+        }
+
+        return Inertia::render('Auth/RegisterSent');
+    }
+
     /**
      * Display the registration details form (Step 2).
      */
-    public function showRegistrationForm(Request $request): Response
+    public function showRegistrationForm(Request $request): Response|RedirectResponse
     {
+        if ($redirect = $this->closedRegistrationRedirect()) {
+            return $redirect;
+        }
         if (! $request->hasValidSignature()) {
             abort(403, 'このリンクは無効か、有効期限が切れています。');
         }
@@ -68,6 +84,9 @@ class RegisteredUserController extends Controller
      */
     public function completeRegistration(Request $request): RedirectResponse
     {
+        if ($redirect = $this->closedRegistrationRedirect()) {
+            return $redirect;
+        }
         $request->validate([
             'name' => 'required|string|max:255',
             'name_kana' => 'required|string|max:255',
@@ -92,19 +111,24 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        app(IntegrationWebhookDispatcher::class)->dispatch('user.registered', [
-            'id' => $user->id,
-            'name' => $user->name,
-            'name_kana' => $user->name_kana,
-            'email' => $user->email,
-            'birthday' => $user->birthday,
-            'gender' => $user->gender,
-            'zip_code' => $user->zip_code,
-            'address' => $user->address,
-        ]);
+        app(IntegrationWebhookDispatcher::class)->dispatch(
+            'user.registered',
+            UserIntegrationPayload::from($user),
+        );
 
         Auth::login($user);
 
         return redirect(route('top', absolute: false));
+    }
+
+    protected function closedRegistrationRedirect(): ?RedirectResponse
+    {
+        if (! config('demo.enabled') || config('demo.allow_registration')) {
+            return null;
+        }
+
+        return redirect()
+            ->route('login')
+            ->with('status', '公開デモでは新規会員登録を停止しています。'.config('demo.guest.email').' でログインしてください。');
     }
 }

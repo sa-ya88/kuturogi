@@ -1,58 +1,58 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 山彦旅館 KUTUROGI
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+旅館の予約サイトを模したポートフォリオです。Laravel + Inertia.js + React で、客室検索・予約・Stripe（テストモード）決済・会員機能を実装しています。
 
-## About Laravel
+**採用担当者の方へ:** 本名・住所・実在のクレジットカードは入力しないでください。新規会員登録は停止しています。ログイン画面の `guest@example.com` / `password` で操作できます。デモデータは数時間ごとに初期化されます。
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## デモ用アカウント
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| 項目 | 値 |
+|---|---|
+| メール | `guest@example.com` |
+| パスワード | `password` |
+| Stripe テストカード | `4242 4242 4242 4242` |
+| 有効期限 / CVC | 将来の任意月 / 任意の3桁 |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+決済は **Stripe Test Mode** のキー（`pk_test_` / `sk_test_`）のみ受け付けます。ライブキーはアプリが拒否します。
 
-## Learning Laravel
+## セットアップ
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+顧客サイトは **kuturogi-admin と同じ SQLite** を使います。テーブル作成は管理画面側の `php artisan migrate` だけです。こちらで `migrate --seed` すると別スキーマになり、予約がまた分かれます。
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cp .env.example .env
+composer install
+npm install
+php artisan key:generate
+# DB_DATABASE は kuturogi-admin の database/database.sqlite を指す
+# php artisan migrate --seed  は実行しない（admin 側で migrate / db:seed）
+npm run build
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+`.env` に Stripe の **テストキー** を設定してください。キーはリポジトリに含めません。
 
-## Contributing
+ローカルのメール送信は既定で `MAIL_MAILER=log` です。会員登録のマジックリンクは `storage/logs/laravel.log` に出ます。ログには問い合わせ本文やメールアドレスは書きません（件名と文字数、エラー時の予約 ID など識別子のみ）。
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 環境変数
 
-## Code of Conduct
+| 変数 | 用途 |
+|---|---|
+| `SHARED_DATABASE` | `true` で管理画面と同じ DB。Webhook を送らない |
+| `DB_DATABASE` | admin の SQLite パス（例: `/workspaces/kuturogi-admin/database/database.sqlite`） |
+| `DEMO_MODE` | 注意書き・会員登録停止・定期初期化の案内（既定 `true`） |
+| `DEMO_REFRESH_HOURS` | データ初期化間隔の表示用（時間、既定 4）。実処理は **kuturogi-admin** の `php artisan demo:refresh`（cron） |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+ロリポップでは、顧客サイトではなく **管理システム（kuturogi-admin）** に cron を設定します。同じ DB を共有しているため、admin を初期化すれば予約サイトのデモ予約も戻ります。手順は kuturogi-admin の README「ロリポップでの cron 設定」を参照してください。
+| `STRIPE_KEY` / `STRIPE_SECRET` | テストモードの公開鍵・秘密鍵 |
+| `INTEGRATION_API_KEY` | 管理画面連携 API（未設定なら 503） |
 
-## Security Vulnerabilities
+`APP_DEBUG=true` はローカル専用です。公開デモでは `false` にしてください。
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 構成
 
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- `app/Http/Controllers` … 画面・API
+- `app/Http/Requests` … バリデーション
+- `app/Services` … 料金計算・Stripe・在庫
+- `resources/js/Pages` … Inertia ページ
+- `resources/js/Components` … `DemoNotice` など共通 UI

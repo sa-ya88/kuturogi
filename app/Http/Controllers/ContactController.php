@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ContactController extends Controller
@@ -25,11 +25,16 @@ class ContactController extends Controller
             'message' => 'required|string|min:10',
         ]);
 
-        // 2. メール送信処理（後ほど Mailable を作成します）
-        // 一旦、ログに記録するだけにします（動作確認用）
-        \Log::info('お問い合わせ届きました: ', $validated);
+        Log::info('Contact form submitted.', [
+            'subject' => $validated['subject'],
+            'message_length' => mb_strlen($validated['message']),
+        ]);
 
-        // 3. 元のページに戻る（React側の onSuccess が実行されます）
-        return back();
+        return redirect()->route('contact.thanks');
+    }
+
+    public function thanks()
+    {
+        return Inertia::render('Contact/Thanks');
     }
 }

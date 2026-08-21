@@ -2,7 +2,13 @@
 .DS_Store
 .env
 .env.backup
+.env.local
+.env.*.local
 .env.production
+*.pem
+coverage
+npm-debug.log*
+yarn-error.log*
 .phpactor.json
 .phpunit.result.cache
 /.codex

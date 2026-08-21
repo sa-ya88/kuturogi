@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
@@ -40,8 +42,26 @@ class Plan extends Model
         'early_bird_days_before' => 'integer',
     ];
 
-    public function rooms()
+    public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function hasBlockingReservations(): bool
+    {
+        return $this->reservations()->exists();
+    }
+
+    public function deletionBlockedMessage(): string
+    {
+        $total = $this->reservations()->count();
+
+        return "このプランは予約履歴があるため削除できません（全{$total}件）。"
+            .'サイトから外す場合は、管理画面で対象客室の紐付けを外すか、公開をOFFにしてください。';
     }
 }

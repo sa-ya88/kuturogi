@@ -2,10 +2,12 @@
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
+import { dummyContact } from '@/data/demoDummy';
 
 export default function Contact() {
     // フォームの状態管理
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
         subject: '宿泊について',
@@ -15,12 +17,7 @@ export default function Contact() {
     // 送信処理
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('contact.send'), {
-            onSuccess: () => {
-                alert('お問い合わせを受け付けました。');
-                reset();
-            },
-        });
+        post(route('contact.send'));
     };
 
     return (
@@ -33,6 +30,11 @@ export default function Contact() {
             </section>
 
             <section className="py-20 max-w-2xl mx-auto px-4">
+                <DemoNotice
+                    onFillDummy={() => {
+                        setData((current) => ({ ...current, ...dummyContact }));
+                    }}
+                />
                 <form onSubmit={submit} className="space-y-6">
                     {/* お名前 */}
                     <div>

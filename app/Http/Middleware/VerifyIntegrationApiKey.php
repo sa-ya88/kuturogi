@@ -16,7 +16,7 @@ class VerifyIntegrationApiKey
             abort(503, 'Integration API is not configured.');
         }
 
-        if ($request->header('X-Integration-Api-Key') !== $apiKey) {
+        if (! hash_equals((string) $apiKey, (string) $request->header('X-Integration-Api-Key'))) {
             abort(401, 'Invalid integration API key.');
         }
 

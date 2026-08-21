@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Room;
-use \App\Models\Plan;
+use App\Models\Plan;
+use App\Support\DemoGuestUser;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -17,11 +17,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. 基本データの作成
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        DemoGuestUser::ensureAndSyncToAdmin();
 
         // 2. 各マスターデータの作成（RoomInventoryは最後にするのでここでは外す）
         $this->call([

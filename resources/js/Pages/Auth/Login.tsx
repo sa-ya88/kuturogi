@@ -1,6 +1,8 @@
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
+import { PageProps } from '@/types';
 
 export default function Login({
     status,
@@ -11,6 +13,8 @@ export default function Login({
     canResetPassword: boolean;
     redirect?: string;
 }) {
+    const demo = usePage<PageProps>().props.demo;
+    const demoEnabled = demo?.enabled;
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -44,6 +48,9 @@ export default function Login({
                 )}
 
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
+                    {demoEnabled && (
+                        <DemoNotice />
+                    )}
                     <form onSubmit={submit} className="space-y-6">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-stone-700">
@@ -117,6 +124,15 @@ export default function Login({
                         </div>
                     </form>
 
+                    {demoEnabled && (
+                        <div className="mt-6 rounded border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">
+                            <p className="font-medium">デモ用アカウント</p>
+                            <p className="mt-1">メール: {demo?.guestEmail}</p>
+                            <p>パスワード: {demo?.guestPassword}</p>
+                            <p className="mt-2 text-xs text-stone-500">会員登録は停止しています。ワンクリックのゲストログインはありません。</p>
+                        </div>
+                    )}
+
                     <div className="mt-8 pt-6 border-t border-stone-100 text-center text-sm text-stone-500">
                         アカウントをお持ちでない方は
                         <Link
@@ -125,6 +141,9 @@ export default function Login({
                         >
                             新規会員登録
                         </Link>
+                        {demoEnabled && !demo?.allowRegistration && (
+                            <p className="mt-2 text-xs text-stone-400">公開デモでは新規会員登録はできません。</p>
+                        )}
                     </div>
                 </div>
             </section>

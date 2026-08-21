@@ -1,6 +1,7 @@
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
 
 interface Props {
     mustVerifyEmail?: boolean;
@@ -58,6 +59,7 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
 
             <section className="py-20 max-w-2xl mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
+                    <DemoNotice />
                     
                     {/* 保存完了時のトーストメッセージ */}
                     {recentlySuccessful && (

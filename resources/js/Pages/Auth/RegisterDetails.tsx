@@ -1,6 +1,8 @@
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
+import { dummyRegisterDetails } from '@/data/demoDummy';
 
 interface Props {
     email: string;
@@ -47,6 +49,14 @@ export default function RegisterDetails({ email, token }: Props) {
 
             <section className="py-20 max-w-xl mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
+                    <DemoNotice
+                        onFillDummy={() => {
+                            setData({
+                                ...data,
+                                ...dummyRegisterDetails,
+                            });
+                        }}
+                    />
                     
                     {/* メールアドレスの確認表示（変更不可） */}
                     <div className="mb-6 p-4 bg-stone-50 border border-stone-100 rounded text-sm text-stone-600">

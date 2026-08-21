@@ -18,11 +18,11 @@ class InventoryController extends Controller
         }
 
         if ($request->filled('from')) {
-            $query->where('date', '>=', $request->query('from'));
+            $query->whereDate('date', '>=', $request->query('from'));
         }
 
         if ($request->filled('to')) {
-            $query->where('date', '<=', $request->query('to'));
+            $query->whereDate('date', '<=', $request->query('to'));
         }
 
         return response()->json($query->get());

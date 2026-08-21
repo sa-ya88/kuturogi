@@ -1,17 +1,24 @@
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
+import { PageProps } from '@/types';
 
 export default function Register() {
-    // 1. 入力項目をemailのみに設定
+    const demo = usePage<PageProps>().props.demo;
+    const demoEnabled = demo?.enabled;
+    const registrationClosed = demoEnabled && demo?.allowRegistration === false;
     const { data, setData, post, processing, errors } = useForm({
         email: '',
     });
+    const guestForm = useForm({});
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (registrationClosed) {
+            return;
+        }
 
-        // 2. Inertiaのpostを使って、auth.phpに登録した名前付きルート「register.email」へ送信
         post(route('register.email'));
     };
 
@@ -30,6 +37,24 @@ export default function Register() {
 
             <section className="py-20 max-w-md mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
+                    {demoEnabled && (
+                        <>
+                            <DemoNotice />
+                            {registrationClosed && (
+                                <p className="mb-6 text-sm text-stone-600 leading-relaxed">
+                                    公開デモでは新規会員登録を停止しています。画面の見た目は確認できますが、認証メールは送信されません。ゲスト（テストユーザー）でログインしてください。
+                                </p>
+                            )}
+                            <button
+                                type="button"
+                                disabled={guestForm.processing}
+                                onClick={() => guestForm.post(route('guest.login'))}
+                                className="mb-6 w-full border border-stone-800 text-stone-800 py-3 tracking-widest hover:bg-stone-50 transition disabled:opacity-50"
+                            >
+                                {guestForm.processing ? 'ログイン中...' : 'ゲスト（テストユーザー）でログイン'}
+                            </button>
+                        </>
+                    )}
                     <form onSubmit={submit} className="space-y-6">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-stone-700">
@@ -43,8 +68,9 @@ export default function Register() {
                                 autoComplete="username"
                                 autoFocus
                                 required
+                                disabled={registrationClosed}
                                 onChange={(e) => setData('email', e.target.value)}
-                                className={inputClassName}
+                                className={`${inputClassName} disabled:bg-stone-100 disabled:text-stone-400`}
                             />
                             {errors.email && (
                                 <div className="text-red-600 text-sm mt-1">{errors.email}</div>
@@ -54,7 +80,7 @@ export default function Register() {
                         <div className="pt-2">
                             <button
                                 type="submit"
-                                disabled={processing}
+                                disabled={processing || registrationClosed}
                                 className="w-full bg-stone-800 text-white py-3 tracking-widest hover:bg-stone-700 transition disabled:opacity-50"
                             >
                                 {processing ? '送信中...' : '認証メールを送信する'}

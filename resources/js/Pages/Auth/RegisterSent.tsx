@@ -20,6 +20,9 @@ export default function RegisterSent() {
                             入力されたメールアドレス宛に、登録用URLを記載した認証メールを送信しました。<br />
                             メールの本文にあるリンクをクリックして、プロフィールの登録を完了させてください。
                         </p>
+                        <p className="text-stone-400 text-center text-xs mt-4">
+                            ローカル環境で MAIL_MAILER=log の場合、本文は storage/logs/laravel.log に出力されます（署名付きURLを含むため、ログの取り扱いに注意してください）。デモ確認はゲストログインが簡単です。
+                        </p>
                     </div>
                     <div className="pt-4 border-t border-stone-100">
                         <Link

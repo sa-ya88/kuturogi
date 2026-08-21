@@ -4,6 +4,8 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import DemoNotice from '@/Components/DemoNotice';
+import StripeTestCardNotice from '@/Components/StripeTestCardNotice';
 
 type ConfirmProps = {
     input: any;
@@ -116,7 +118,7 @@ function ConfirmShell({
 
             await new Promise<void>((resolve, reject) => {
                 router.post(route('reservations.store'), buildStorePayload(input, paymentIntentId), {
-                    preserveScroll: true,
+                    preserveScroll: (page) => Object.keys(page.props.errors ?? {}).length > 0,
                     onError: (errors) => {
                         const messages = flattenErrors(errors as Record<string, unknown>);
                         setLocalError(messages[0] || '予約確定に失敗しました。');
@@ -150,7 +152,8 @@ function ConfirmShell({
         <GuestLayout>
             <Head title="予約内容の確認" />
             <section className="pt-32 pb-20 max-w-6xl mx-auto px-4">
-                <h1 className="text-2xl font-light tracking-widest text-center mb-12 text-stone-800">ご予約内容の最終確認</h1>
+                <h1 className="text-2xl font-light tracking-widest text-center mb-8 text-stone-800">ご予約内容の最終確認</h1>
+                <DemoNotice />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div className="lg:col-span-2">
@@ -197,7 +200,9 @@ function ConfirmShell({
                                 <div className="space-y-2 text-sm">
                                     <p><span className="text-stone-500">お名前：</span> {input.last_name} {input.first_name}</p>
                                     <p><span className="text-stone-500">フリガナ：</span> {input.last_name_kana} {input.first_name_kana}</p>
-                                    <p><span className="text-stone-500">電話番号：</span> {input.tel}</p>
+                                    {input.tel ? (
+                                        <p><span className="text-stone-500">電話番号：</span> {input.tel}</p>
+                                    ) : null}
                                     <p><span className="text-stone-500">メール：</span> {input.email}</p>
                                     <p><span className="text-stone-500">住所：</span> {input.zip_code} {input.address} {input.building}</p>
                                     {Number(input.room_count) > 1 && Array.isArray(input.representatives) && (
@@ -260,6 +265,7 @@ function ConfirmShell({
                                 {isCredit && (
                                     <div className="border border-stone-200 p-4 space-y-3">
                                         <label className="text-[10px] text-stone-400 block">カード情報</label>
+                                        <StripeTestCardNotice />
                                         {!paymentReady && !paymentError && (
                                             <p className="text-sm text-stone-500">決済フォームを準備しています…</p>
                                         )}
@@ -280,7 +286,11 @@ function ConfirmShell({
                                 >
                                     {busy ? '処理中...' : isCredit ? 'カード与信して予約を確定する' : 'この内容で予約を確定する'}
                                 </button>
-                                <button type="button" onClick={() => window.history.back()} className="w-full text-sm text-stone-400 hover:text-stone-600">
+                                <button
+                                    type="button"
+                                    onClick={() => router.post(route('reservations.details'), input, { preserveScroll: false })}
+                                    className="w-full text-sm text-stone-400 hover:text-stone-600"
+                                >
                                     入力内容を修正する
                                 </button>
                             </form>

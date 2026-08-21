@@ -44,6 +44,20 @@ class PlanController extends Controller
         return response()->json($plan->fresh()->load('rooms'));
     }
 
+    public function destroy(Plan $plan): JsonResponse
+    {
+        if ($plan->hasBlockingReservations()) {
+            return response()->json([
+                'message' => $plan->deletionBlockedMessage(),
+            ], 422);
+        }
+
+        $plan->rooms()->detach();
+        $plan->delete();
+
+        return response()->json(['status' => 'ok']);
+    }
+
     protected function validatePlanPayload(Request $request, bool $partial = false): array
     {
         $requiredRule = $partial ? 'sometimes' : 'required';

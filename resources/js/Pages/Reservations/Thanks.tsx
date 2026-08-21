@@ -1,7 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { useEffect } from 'react';
 
 export default function Thanks() {
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+    }, []);
+
     return (
         <GuestLayout>
             <Head title="予約完了" />

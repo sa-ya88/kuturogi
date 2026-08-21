@@ -4,7 +4,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
 
 export default function GuestLayout({ children }: PropsWithChildren) {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, demo } = usePage<PageProps>().props;
     const user = auth.user;
 
     const navLinkClass = 'hover:text-amber-700 transition-colors';
@@ -16,9 +16,16 @@ export default function GuestLayout({ children }: PropsWithChildren) {
             <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* 1段目: 会員メニュー */}
-                    <div className="flex justify-end items-center h-10 border-b border-gray-100 text-xs tracking-widest">
+                    <div className="flex justify-between items-center h-10 border-b border-gray-100 text-xs tracking-widest gap-4">
+                        {demo?.enabled ? (
+                            <p className="text-[10px] sm:text-xs text-amber-800 leading-tight">
+                                公開デモです。個人情報は入力しないでください。新規会員登録はできません。データは{demo.refreshHours ?? 4}時間ごとに初期化されます。
+                            </p>
+                        ) : (
+                            <span />
+                        )}
                         {!user ? (
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 shrink-0">
                                 <Link href={route('register')} className={authLinkClass}>
                                     新規登録
                                 </Link>
@@ -27,7 +34,7 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                                 </Link>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 shrink-0">
                                 <span className="text-stone-600">ようこそ、{user.name}様</span>
                                 <Link href={route('profile.edit')} className={authLinkClass}>
                                     会員情報確認・変更
@@ -48,16 +55,29 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                     </div>
 
                     {/* 2段目: サイトメニュー */}
-                    <div className="flex justify-between h-16 items-center">
+                    <div className="flex justify-between h-16 items-center gap-4">
                         <Link href="/" className="text-xl font-bold tracking-widest">
                             山彦旅館 KUTUROGI
                         </Link>
-                        <div className="hidden md:flex space-x-8 text-sm tracking-widest">
-                            <Link href="/rooms" className={navLinkClass}>お部屋</Link>
-                            <Link href="/onsen" className={navLinkClass}>大浴場</Link>
-                            <Link href="/food" className={navLinkClass}>お料理</Link>
-                            <Link href="/sightseeing" className={navLinkClass}>周辺観光</Link>
-                            <Link href="/access" className={navLinkClass}>アクセス</Link>
+                        <div className="flex items-center gap-4 sm:gap-8">
+                            <div className="hidden md:flex space-x-8 text-sm tracking-widest">
+                                <Link href="/rooms" className={navLinkClass}>お部屋</Link>
+                                <Link href="/onsen" className={navLinkClass}>大浴場</Link>
+                                <Link href="/food" className={navLinkClass}>お料理</Link>
+                                <Link href="/sightseeing" className={navLinkClass}>周辺観光</Link>
+                                <Link href="/access" className={navLinkClass}>アクセス</Link>
+                            </div>
+                            <Link
+                                href={route('reservations.create', {
+                                    adults: 2,
+                                    children: 0,
+                                    room_count: 1,
+                                })}
+                                preserveState={false}
+                                className="bg-amber-800 px-4 py-2 text-xs font-bold tracking-[0.2em] text-white shadow-sm transition-colors hover:bg-amber-700 sm:px-6 sm:text-sm"
+                            >
+                                宿泊予約
+                            </Link>
                         </div>
                     </div>
                 </div>

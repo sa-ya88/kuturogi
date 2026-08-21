@@ -32,7 +32,11 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
                         心安らぐ、<br/>至福のひととき。
                     </h1>
                     <Link 
-                        href="/rooms" 
+                        href={route('reservations.create', {
+                            adults: 2,
+                            children: 0,
+                            room_count: 1,
+                        })}
                         className="inline-block border border-white px-10 py-3 hover:bg-white hover:text-stone-900 transition-colors tracking-widest"
                     >
                         プラン一覧を見る

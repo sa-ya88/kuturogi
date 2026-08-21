@@ -1,7 +1,6 @@
 // resources/js/Pages/Rooms/Show.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link } from '@inertiajs/react';
-import { useForm } from '@inertiajs/react';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
@@ -18,16 +17,35 @@ interface Plan {
     description: string;
 }
 
+interface RoomDetails {
+    facilities?: string[];
+    internet?: string | null;
+    smoking?: string | null;
+    amenities?: string[];
+}
+
 interface Room {
     id: number;
     name: string;
     description: string;
     images: string[];
     features: string[];
+    details?: RoomDetails | null;
     plans: Plan[];
 }
 
+function joinItems(items?: string[] | null): string {
+    return (items ?? []).filter((item) => item.trim() !== '').join('、');
+}
+
 export default function Show({ room }: { room: Room }) {
+    const details = room.details ?? {};
+    const detailRows = [
+        { label: '客室設備', value: joinItems(details.facilities) },
+        { label: 'インターネット', value: details.internet?.trim() ?? '' },
+        { label: '禁煙・喫煙', value: details.smoking?.trim() ?? '' },
+        { label: 'アメニティ', value: joinItems(details.amenities) },
+    ].filter((row) => row.value !== '');
     return (
         <GuestLayout>
             <Head title={room.name} />
@@ -76,28 +94,22 @@ export default function Show({ room }: { room: Room }) {
                             {room.description}
                         </p>
 
-                        {/* 部屋の詳細欄 */}
+                        {detailRows.length > 0 && (
                         <div className="bg-stone-50 p-8 mb-12 border border-stone-100">
                             <h3 className="text-lg font-medium mb-6 pb-2 border-b border-stone-200 tracking-widest">お部屋詳細</h3>
                             <dl className="grid grid-cols-1 gap-y-4 text-sm">
-                                <div className="flex border-b border-stone-100 pb-2">
-                                    <dt className="w-24 text-stone-400">客室設備</dt>
-                                    <dd className="text-stone-700">バス、シャワー、トイレ、冷暖房、テレビ、冷蔵庫</dd>
+                                {detailRows.map((row, index) => (
+                                <div
+                                    key={row.label}
+                                    className={`flex ${index < detailRows.length - 1 ? 'border-b border-stone-100 pb-2' : ''}`}
+                                >
+                                    <dt className="w-24 text-stone-400 shrink-0">{row.label}</dt>
+                                    <dd className="text-stone-700">{row.value}</dd>
                                 </div>
-                                <div className="flex border-b border-stone-100 pb-2">
-                                    <dt className="w-24 text-stone-400">インターネット</dt>
-                                    <dd className="text-stone-700">全室Wi-Fi無料</dd>
-                                </div>
-                                <div className="flex border-b border-stone-100 pb-2">
-                                    <dt className="w-24 text-stone-400">禁煙・喫煙</dt>
-                                    <dd className="text-stone-700">全室禁煙（喫煙スペースあり）</dd>
-                                </div>
-                                <div className="flex">
-                                    <dt className="w-24 text-stone-400">アメニティ</dt>
-                                    <dd className="text-stone-700">タオル、歯ブラシ、浴衣、ドライヤー、石鹸類</dd>
-                                </div>
+                                ))}
                             </dl>
                         </div>
+                        )}
 
                         {/* 予約ボタン */}
                         <div className="border-t border-stone-200 pt-8">

@@ -8,6 +8,7 @@ use App\Services\ReservationPricingService;
 use App\Services\StripePaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ReservationPaymentIntentController extends Controller
@@ -62,7 +63,13 @@ class ReservationPaymentIntentController extends Controller
                 'plan_id' => (string) $plan->id,
             ]);
         } catch (Throwable $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            Log::warning('PaymentIntent creation failed.', [
+                'room_id' => $room->id,
+                'plan_id' => $plan->id,
+                'exception' => $e::class,
+            ]);
+
+            return response()->json(['message' => '決済の準備に失敗しました。テストモードのキーを確認してください。'], 422);
         }
 
         return response()->json([

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreReservationRequest;
 use App\Models\Plan;
 use App\Models\PricingCancelRule;
 use App\Models\PricingOptionFee;
@@ -9,12 +10,19 @@ use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\RoomInventory;
 use App\Services\IntegrationWebhookDispatcher;
+use App\Services\ReservationCancellationService;
 use App\Services\ReservationPricingService;
+use App\Services\SharedReservationOccupancyService;
 use App\Services\StripePaymentService;
 use App\Support\PlanChoiceOptions;
+use App\Support\PersonName;
 use App\Support\ReservationPaymentPayload;
+use App\Support\UserIntegrationPayload;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Throwable;
 
@@ -26,36 +34,48 @@ class ReservationController extends Controller
         $checkout = $request->query('checkout');
         $roomCount = $request->query('room_count', 1);
 
-        $rooms = Room::with(['plans'])->orderBy('sort_order')->orderBy('id')->get()->map(function ($room) use ($checkin, $checkout) {
-            $minStock = null;
+        $rooms = Room::with(['plans'])
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(function ($room) use ($checkin, $checkout) {
+                $minStock = null;
 
-            if ($checkin && $checkout) {
-                $lastNight = date('Y-m-d', strtotime($checkout.' -1 day'));
+                if ($checkin && $checkout) {
+                    $from = Carbon::parse($checkin)->startOfDay();
+                    $to = Carbon::parse($checkout)->startOfDay();
 
-                $inventories = RoomInventory::where('room_id', $room->id)
-                    ->whereBetween('date', [$checkin, $lastNight])
-                    ->pluck('remains');
+                    if ($to->lte($from)) {
+                        $minStock = 0;
+                    } else {
+                        $lastNight = $to->copy()->subDay()->toDateString();
+                        $nights = $from->diffInDays($to);
 
-                $nights = (strtotime($checkout) - strtotime($checkin)) / 86400;
+                        $byDate = RoomInventory::query()
+                            ->where('room_id', $room->id)
+                            ->onDateRange($from->toDateString(), $lastNight)
+                            ->get()
+                            ->groupBy(fn (RoomInventory $inventory) => $inventory->dateString())
+                            ->map(fn ($rows) => (int) $rows->min('remains'));
 
-                if ($inventories->count() < $nights) {
-                    $minStock = 0;
-                } else {
-                    $minStock = $inventories->min();
+                        $minStock = $byDate->count() < $nights ? 0 : (int) $byDate->min();
+                    }
                 }
-            }
 
-            $room->current_inventory = $minStock;
+                $room->current_inventory = $minStock;
 
-            return $room;
-        });
+                return $room;
+            });
 
         return Inertia::render('Reservations/Create', [
             'rooms' => $rooms,
             'selectedRoomId' => $request->query('room_id'),
             'searchParams' => [
-                'checkin' => $checkin,
-                'checkout' => $checkout,
+                'checkin' => $checkin ?: '',
+                'checkout' => $checkout ?: '',
+                'adults' => (int) $request->query('adults', 2),
+                'children' => (int) $request->query('children', 0),
                 'room_count' => (int) $roomCount,
             ],
         ]);
@@ -66,19 +86,63 @@ class ReservationController extends Controller
         $reservations = Reservation::with(['plan', 'room'])
             ->where('user_id', $request->user()->id)
             ->latest()
-            ->get();
+            ->get()
+            ->map(function (Reservation $reservation) {
+                $reservation->setAttribute(
+                    'can_cancel_without_fee',
+                    $reservation->status !== 'cancelled'
+                        && PricingCancelRule::allowsFreeCancellation($reservation->checkin_date),
+                );
+
+                return $reservation;
+            });
 
         return Inertia::render('Reservations/Index', [
             'reservations' => $reservations,
+            'cancelPolicy' => PricingCancelRule::activeDisplayTexts(),
         ]);
+    }
+
+    public function cancel(Request $request, Reservation $reservation, ReservationCancellationService $canceller)
+    {
+        abort_unless($reservation->user_id === $request->user()->id, 403);
+
+        try {
+            $canceller->cancelByGuest($reservation);
+        } catch (Throwable $e) {
+            return redirect()
+                ->route('reservations.index')
+                ->withErrors(['cancel' => $e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('reservations.index')
+            ->with('success', 'ご予約をキャンセルしました。');
     }
 
     public function details(Request $request)
     {
+        $input = $request->except(['_token']);
+
+        if (blank($input['plan_id'] ?? null) || blank($input['room_id'] ?? null)) {
+            $saved = $request->session()->get('reservation_confirm');
+            if (is_array($saved)) {
+                $input = $saved;
+            }
+        }
+
+        if ($request->user()) {
+            foreach (PersonName::guestFieldsFromUser($request->user()) as $key => $value) {
+                if (blank($input[$key] ?? null) && $value !== '') {
+                    $input[$key] = $value;
+                }
+            }
+        }
+
         return Inertia::render('Reservations/Details', [
-            'input' => $request->all(),
-            'room' => Room::find($request->room_id),
-            'plan' => Plan::find($request->plan_id),
+            'input' => $input,
+            'room' => Room::find($input['room_id'] ?? null),
+            'plan' => Plan::find($input['plan_id'] ?? null),
             'optionFees' => PricingOptionFee::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -98,6 +162,13 @@ class ReservationController extends Controller
     {
         if ($request->isMethod('post')) {
             $input = $request->except(['_token']);
+            if ($request->user()) {
+                foreach (PersonName::guestFieldsFromUser($request->user()) as $key => $value) {
+                    if (blank($input[$key] ?? null) && $value !== '') {
+                        $input[$key] = $value;
+                    }
+                }
+            }
             $request->session()->put('reservation_confirm', $input);
         } else {
             $input = $request->session()->get('reservation_confirm');
@@ -142,43 +213,13 @@ class ReservationController extends Controller
             'nights' => $quote['nights_count'],
             'cancelPolicy' => $quote['cancel_policy'],
             'stripeKey' => config('services.stripe.key'),
-            'stripeConfigured' => filled(config('services.stripe.key')) && filled(config('services.stripe.secret')),
+            'stripeConfigured' => app(StripePaymentService::class)->isConfigured(),
         ]);
     }
 
-    public function store(Request $request, ReservationPricingService $pricing, StripePaymentService $stripe)
+    public function store(StoreReservationRequest $request, ReservationPricingService $pricing, StripePaymentService $stripe)
     {
-        $validated = $request->validate([
-            'plan_id' => 'required|exists:plans,id',
-            'room_id' => 'required|exists:rooms,id',
-            'checkin_date' => 'nullable|date',
-            'check_in_date' => 'nullable|date',
-            'checkout_date' => 'nullable|date',
-            'check_out_date' => 'nullable|date',
-            'adult_count' => 'required|integer|min:1',
-            'child_count' => 'required|integer|min:0',
-            'room_count' => 'required|integer|min:1',
-            'last_name' => 'required|string',
-            'first_name' => 'required|string',
-            'last_name_kana' => 'required|string',
-            'first_name_kana' => 'required|string',
-            'tel' => 'required|string',
-            'email' => 'required|email',
-            'zip_code' => 'required|string',
-            'address' => 'required|string',
-            'building' => 'nullable|string',
-            'payment_method' => 'required|in:local,credit',
-            'payment_intent_id' => 'nullable|string',
-            'selected_choices' => 'nullable|array',
-            'selected_choices.*' => 'nullable|string|max:255',
-            'selected_option_ids' => 'nullable|array',
-            'selected_option_ids.*' => 'integer',
-            'representatives' => 'nullable|array',
-            'representatives.*' => 'nullable|string|max:255',
-        ], [
-            'plan_id.required' => 'プランを選択してください',
-            'room_id.required' => 'お部屋を選択してください',
-        ]);
+        $validated = $request->validated();
 
         $roomCount = max(1, (int) $validated['room_count']);
         $primaryName = trim(($validated['last_name'] ?? '').' '.($validated['first_name'] ?? ''));
@@ -245,6 +286,12 @@ class ReservationController extends Controller
                     (int) $quote['total'],
                 );
             } catch (Throwable $e) {
+                Log::warning('Reservation payment authorization failed.', [
+                    'plan_id' => $validated['plan_id'],
+                    'room_id' => $validated['room_id'],
+                    'exception' => $e::class,
+                ]);
+
                 return redirect()
                     ->route('reservations.confirm')
                     ->withErrors([
@@ -277,20 +324,34 @@ class ReservationController extends Controller
             ...$paymentFields,
             'selected_choices' => $selectedChoices !== [] ? $selectedChoices : null,
             'selected_option_fees' => $quote['selected_options'] !== [] ? $quote['selected_options'] : null,
+            'guest_name' => trim(($validated['last_name'] ?? '').' '.($validated['first_name'] ?? ''))
+                ?: (auth()->user()?->name),
+            'guest_name_kana' => trim(($validated['last_name_kana'] ?? '').' '.($validated['first_name_kana'] ?? ''))
+                ?: (auth()->user()?->name_kana),
+            'guest_tel' => $validated['tel'] ?? null,
+            'guest_email' => $validated['email'] ?? auth()->user()?->email,
+            'guest_zip_code' => $validated['zip_code'] ?? auth()->user()?->zip_code,
+            'guest_address' => $validated['address'] ?? auth()->user()?->address,
+            'guest_building' => $validated['building'] ?? '',
         ];
 
-        if (! auth()->check()) {
-            $reservationData['guest_name'] = $validated['last_name'].' '.$validated['first_name'];
-            $reservationData['guest_name_kana'] = $validated['last_name_kana'].' '.$validated['first_name_kana'];
-            $reservationData['guest_tel'] = $validated['tel'];
-            $reservationData['guest_email'] = $validated['email'];
-            $reservationData['guest_zip_code'] = $validated['zip_code'];
-            $reservationData['guest_address'] = $validated['address'];
-            $reservationData['guest_building'] = $validated['building'] ?? '';
+        if (Schema::hasColumn('reservations', 'source')) {
+            $reservationData['source'] = 'kuturogi';
+        }
+
+        if (Schema::hasColumn('reservations', 'stay_status')) {
+            $reservationData['stay_status'] = 'reserved';
+        }
+
+        if (Schema::hasTable('customers') && ! empty($reservationData['guest_email'])) {
+            $reservationData['customer_id'] = DB::table('customers')
+                ->where('email', $reservationData['guest_email'])
+                ->value('id');
         }
 
         try {
             $reservation = DB::transaction(function () use ($checkinDate, $checkoutDate, $reservationData) {
+                $occupancy = app(SharedReservationOccupancyService::class);
                 $period = new \DatePeriod(
                     new \DateTime($checkinDate),
                     new \DateInterval('P1D'),
@@ -301,7 +362,7 @@ class ReservationController extends Controller
                     $formattedDate = $date->format('Y-m-d');
 
                     $inventory = RoomInventory::where('room_id', $reservationData['room_id'])
-                        ->where('date', $formattedDate)
+                        ->onDate($formattedDate)
                         ->lockForUpdate()
                         ->first();
 
@@ -309,38 +370,60 @@ class ReservationController extends Controller
                         throw new \Exception($formattedDate.'は満室です。');
                     }
 
-                    $inventory->decrement('remains', $reservationData['room_count']);
+                    if (! $occupancy->enabled()) {
+                        $inventory->decrement('remains', $reservationData['room_count']);
+                    }
                 }
 
-                return Reservation::create($reservationData);
+                $created = Reservation::create($reservationData);
+
+                if (Schema::hasColumn('reservations', 'kuturogi_reservation_id')) {
+                    $created->update(['kuturogi_reservation_id' => $created->id]);
+                }
+
+                if ($occupancy->enabled()) {
+                    $occupancy->assign($created);
+                }
+
+                return $created->fresh();
             });
         } catch (Throwable $e) {
+            Log::warning('Reservation store failed.', [
+                'room_id' => $reservationData['room_id'] ?? null,
+                'plan_id' => $reservationData['plan_id'] ?? null,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return redirect()
                 ->route('reservations.confirm')
                 ->withErrors(['dates' => $e->getMessage()]);
         }
 
-        $webhookGuestName = $reservation->guest_name
-            ?: ($validated['last_name'].' '.$validated['first_name']);
+        if ($reservation->user_id && $request->user()) {
+            app(IntegrationWebhookDispatcher::class)->dispatch(
+                'user.registered',
+                UserIntegrationPayload::from($request->user()),
+            );
+        }
 
         app(IntegrationWebhookDispatcher::class)->dispatch('reservation.created', [
             'id' => $reservation->id,
             'user_id' => $reservation->user_id,
             'room_id' => $reservation->room_id,
             'plan_id' => $reservation->plan_id,
-            'checkin_date' => $reservation->checkin_date,
-            'checkout_date' => $reservation->checkout_date,
+            'checkin_date' => $reservation->checkin_date?->toDateString(),
+            'checkout_date' => $reservation->checkout_date?->toDateString(),
             'guest_count' => $reservation->guest_count,
             'room_count' => $roomCount,
             'adult_count' => $validated['adult_count'],
             'child_count' => $validated['child_count'],
             'total_price' => $reservation->total_price,
             'status' => $reservation->status,
-            'guest_name' => $webhookGuestName,
-            'guest_name_kana' => $reservation->guest_name_kana
-                ?: (($validated['last_name_kana'] ?? '').' '.($validated['first_name_kana'] ?? '')),
-            'guest_tel' => $reservation->guest_tel ?: ($validated['tel'] ?? null),
-            'guest_email' => $reservation->guest_email ?: ($validated['email'] ?? null),
+            'guest_name' => $reservation->guest_name,
+            'guest_name_kana' => $reservation->guest_name_kana,
+            'guest_tel' => $reservation->guest_tel,
+            'guest_email' => $reservation->guest_email,
             'selected_choices' => $reservation->selected_choices,
             'selected_option_fees' => $reservation->selected_option_fees,
             'representatives' => $representatives,
@@ -350,5 +433,10 @@ class ReservationController extends Controller
         $request->session()->forget('reservation_confirm');
 
         return redirect()->route('reservations.thanks')->with('success', 'ご予約が完了いたしました。');
+    }
+
+    public function thanks()
+    {
+        return Inertia::render('Reservations/Thanks');
     }
 }

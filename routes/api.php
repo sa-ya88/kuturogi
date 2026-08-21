@@ -32,6 +32,7 @@ Route::prefix('integration')
         Route::get('/plans', [IntegrationPlanController::class, 'index']);
         Route::post('/plans', [IntegrationPlanController::class, 'store']);
         Route::patch('/plans/{plan}', [IntegrationPlanController::class, 'update']);
+        Route::delete('/plans/{plan}', [IntegrationPlanController::class, 'destroy']);
         Route::get('/inventories', [InventoryController::class, 'index']);
         Route::patch('/inventories', [InventoryController::class, 'update']);
         Route::put('/pricing-settings', [\App\Http\Controllers\Api\Integration\PricingSettingsController::class, 'sync']);

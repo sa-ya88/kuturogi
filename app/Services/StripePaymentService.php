@@ -14,7 +14,13 @@ class StripePaymentService
 
     public function isConfigured(): bool
     {
-        return filled(config('services.stripe.secret')) && filled(config('services.stripe.key'));
+        $key = (string) config('services.stripe.key');
+        $secret = (string) config('services.stripe.secret');
+
+        return str_starts_with($key, 'pk_test_')
+            && str_starts_with($secret, 'sk_test_')
+            && ! str_contains($key, 'xxx')
+            && ! str_contains($secret, 'xxx');
     }
 
     protected function client(): StripeClient
@@ -23,12 +29,11 @@ class StripePaymentService
             return $this->stripe;
         }
 
-        $secret = config('services.stripe.secret');
-        if (blank($secret)) {
-            throw new RuntimeException('STRIPE_SECRET is not configured.');
+        if (! $this->isConfigured()) {
+            throw new RuntimeException('Stripe はテストモード（pk_test_ / sk_test_）のキーのみ利用できます。');
         }
 
-        return $this->stripe = new StripeClient($secret);
+        return $this->stripe = new StripeClient((string) config('services.stripe.secret'));
     }
 
     /**

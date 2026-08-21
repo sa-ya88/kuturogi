@@ -1,36 +1,76 @@
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, useForm } from '@inertiajs/react';
-import { useState, useMemo } from 'react';
+import StayCalendarModal from '@/Components/StayCalendarModal';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState, useMemo, useRef } from 'react';
+
+const ISO_DATE = /^(\d{4}-\d{2}-\d{2})/;
+
+const parseStayDate = (value: unknown): string => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+
+    const matched = value.trim().match(ISO_DATE);
+
+    return matched ? matched[1] : '';
+};
+
+const hasSpecifiedStayDates = (checkin: unknown, checkout: unknown): boolean => {
+    const start = parseStayDate(checkin);
+    const end = parseStayDate(checkout);
+
+    return Boolean(start && end && start < end);
+};
 
 // 日付を指定日数分進める/戻す ヘルパー関数
 const addDays = (dateStr: string, days: number): string => {
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
+    const parsed = parseStayDate(dateStr);
+    if (!parsed) {
+        return '';
+    }
+
+    const [year, month, day] = parsed.split('-').map(Number);
+    const date = new Date(year, month - 1, day + days);
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
-// 今日の日付を YYYY-MM-DD 形式で取得
-const getTodayDate = (): string => {
-    return new Date().toISOString().split('T')[0];
-};
-
-export default function Create({ rooms, selectedRoomId }: any) {
+export default function Create({ rooms, selectedRoomId, searchParams = {} }: any) {
 
     const { post, processing, errors } = useForm({});
-    
-    const today = getTodayDate();
-    const tomorrow = addDays(today, 1);
-    
+    const checkinInputRef = useRef<HTMLInputElement>(null);
+    const checkoutInputRef = useRef<HTMLInputElement>(null);
+
     const [searchQuery, setSearchQuery] = useState({
         room_id: selectedRoomId || '',
-        checkin: today,
-        checkout: tomorrow,
-        adults: 2,
-        children: 0,
-        room_count: 1,
+        checkin: parseStayDate(searchParams.checkin),
+        checkout: parseStayDate(searchParams.checkout),
+        adults: Number(searchParams.adults ?? 2),
+        children: Number(searchParams.children ?? 0),
+        room_count: Number(searchParams.room_count ?? 1),
     });
 
     const [modalPlan, setModalPlan] = useState<any>(null);
+    const [calendarTarget, setCalendarTarget] = useState<{
+        planId: number;
+        roomId: number;
+        planName: string;
+        roomName: string;
+    } | null>(null);
+
+    const applySearch = (query = searchQuery) => {
+        router.get(route('reservations.create'), {
+            room_id: query.room_id || undefined,
+            checkin: query.checkin || undefined,
+            checkout: query.checkout || undefined,
+            adults: query.adults,
+            children: query.children,
+            room_count: query.room_count,
+        }, {
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     const handleCheckinChange = (value: string) => {
         let newCheckout = searchQuery.checkout;
@@ -45,7 +85,11 @@ export default function Create({ rooms, selectedRoomId }: any) {
             }
         }
         
-        setSearchQuery({ ...searchQuery, checkin: value, checkout: newCheckout });
+        const next = { ...searchQuery, checkin: value, checkout: newCheckout };
+        setSearchQuery(next);
+        if (hasSpecifiedStayDates(next.checkin, next.checkout)) {
+            applySearch(next);
+        }
     };
 
     const handleCheckoutChange = (value: string) => {
@@ -61,19 +105,65 @@ export default function Create({ rooms, selectedRoomId }: any) {
             }
         }
         
-        setSearchQuery({ ...searchQuery, checkin: newCheckin, checkout: value });
+        const next = { ...searchQuery, checkin: newCheckin, checkout: value };
+        setSearchQuery(next);
+        if (hasSpecifiedStayDates(next.checkin, next.checkout)) {
+            applySearch(next);
+        }
     };
 
-    const handleReserve = (planId: number, roomId: number) => {
+    const submitReservation = (
+        planId: number,
+        roomId: number,
+        checkin: string,
+        checkout: string,
+    ) => {
         post(route('reservations.details', {
             plan_id: planId,
             room_id: roomId,
-            checkin_date: searchQuery.checkin,
-            checkout_date: searchQuery.checkout,
+            checkin_date: checkin,
+            checkout_date: checkout,
             adult_count: searchQuery.adults,
             child_count: searchQuery.children,
             room_count: searchQuery.room_count,
         }));
+    };
+
+    const resolveStayDates = () => {
+        const checkin = parseStayDate(checkinInputRef.current?.value) || parseStayDate(searchQuery.checkin);
+        const checkout = parseStayDate(checkoutInputRef.current?.value) || parseStayDate(searchQuery.checkout);
+
+        return { checkin, checkout };
+    };
+
+    const handleReserve = (
+        event: React.MouseEvent<HTMLButtonElement>,
+        planId: number,
+        roomId: number,
+        planName: string,
+        roomName: string,
+    ) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const { checkin, checkout } = resolveStayDates();
+        if (!hasSpecifiedStayDates(checkin, checkout)) {
+            setCalendarTarget({ planId, roomId, planName, roomName });
+            return;
+        }
+
+        submitReservation(planId, roomId, checkin, checkout);
+    };
+
+    const handleCalendarConfirm = (checkin: string, checkout: string) => {
+        if (!calendarTarget) {
+            return;
+        }
+
+        setSearchQuery({ ...searchQuery, checkin, checkout });
+        const { planId, roomId } = calendarTarget;
+        setCalendarTarget(null);
+        submitReservation(planId, roomId, checkin, checkout);
     };
     
     const groupedPlans = useMemo(() => {
@@ -101,8 +191,12 @@ export default function Create({ rooms, selectedRoomId }: any) {
                     };
                 }
 
-                // 在庫判定（日付未選択時は null なので通るはず）
+                const datesSpecified = hasSpecifiedStayDates(searchQuery.checkin, searchQuery.checkout);
                 const hasStock = room.current_inventory === null || room.current_inventory >= searchQuery.room_count;
+
+                if (datesSpecified && !hasStock) {
+                    return;
+                }
 
                 groups[groupKey].room_options.push({
                     room_id: room.id,
@@ -115,14 +209,16 @@ export default function Create({ rooms, selectedRoomId }: any) {
             });
         });
 
-        let result = Object.values(groups);
+        let result = Object.values(groups).filter((g: any) => g.room_options.length > 0);
 
-        // 2. フィルタリング（デバッグのため一旦ゆるく設定）
         if (searchQuery.room_id) {
             const selectedId = parseInt(searchQuery.room_id as string);
-            result = result.filter((g: any) => 
-                g.room_options.some((opt: any) => opt.room_id === selectedId)
-            );
+            result = result
+                .map((g: any) => ({
+                    ...g,
+                    room_options: g.room_options.filter((opt: any) => opt.room_id === selectedId),
+                }))
+                .filter((g: any) => g.room_options.length > 0);
         }
 
         return result;
@@ -133,9 +229,10 @@ export default function Create({ rooms, selectedRoomId }: any) {
         <GuestLayout>
             <Head title="宿泊プラン一覧" />
 
-            {/* 1. 検索バー */}
-            <div className="sticky top-20 z-50 bg-stone-800 text-white border-t border-stone-700">
-                <div className="max-w-7xl mx-auto px-4 py-6">
+            {/* 1. 検索バー（固定ヘッダー h-10 + h-16 の下に配置） */}
+            <div className="pt-[6.5rem]">
+                <div className="sticky top-[6.5rem] z-40 border-t border-stone-700 bg-stone-800 text-white">
+                    <div className="mx-auto max-w-7xl px-4 py-6">
                     <div className="flex flex-wrap items-center gap-y-6 gap-x-8 text-xs">
                         {/* 部屋タイプ */}
                         <div className="flex items-center gap-3">
@@ -145,7 +242,7 @@ export default function Create({ rooms, selectedRoomId }: any) {
                                 value={searchQuery.room_id} 
                                 onChange={e => setSearchQuery({...searchQuery, room_id: e.target.value})}
                             >
-                                <option value="">全ての部屋タイプ</option>
+                                <option value="">すべての部屋</option>
                                 {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
                             </select>
                         </div>
@@ -154,9 +251,24 @@ export default function Create({ rooms, selectedRoomId }: any) {
                         <div className="flex items-center gap-3 border-l border-stone-600 pl-8">
                             <span className="opacity-70 font-bold">ご宿泊日程</span>
                             <div className="flex items-center gap-2">
-                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkin} onChange={e => handleCheckinChange(e.target.value)} />
+                                <input
+                                    ref={checkinInputRef}
+                                    type="date"
+                                    className="h-10 rounded border-stone-600 bg-stone-700 px-3 text-sm text-white [color-scheme:dark]"
+                                    value={searchQuery.checkin}
+                                    onChange={e => handleCheckinChange(e.target.value)}
+                                />
                                 <span className="mx-1">〜</span>
-                                <input type="date" className="bg-stone-700 border-stone-600 h-10 text-white rounded px-3 text-sm" value={searchQuery.checkout} onChange={e => handleCheckoutChange(e.target.value)} />
+                                <input
+                                    ref={checkoutInputRef}
+                                    type="date"
+                                    className="h-10 rounded border-stone-600 bg-stone-700 px-3 text-sm text-white [color-scheme:dark]"
+                                    value={searchQuery.checkout}
+                                    onChange={e => handleCheckoutChange(e.target.value)}
+                                />
+                                {!hasSpecifiedStayDates(searchQuery.checkin, searchQuery.checkout) && (
+                                    <span className="rounded bg-stone-600 px-2 py-1 text-[10px] tracking-widest text-stone-200">未定</span>
+                                )}
                             </div>
                         </div>
 
@@ -181,8 +293,13 @@ export default function Create({ rooms, selectedRoomId }: any) {
 
                         {/* ボタン類 */}
                         <div className="flex gap-3 ml-auto">
-                            <button className="bg-stone-600 px-6 h-10 rounded hover:bg-stone-500 transition-colors font-medium" onClick={() => setSearchQuery({room_id: '', checkin: today, checkout: tomorrow, adults: 2, children: 0, room_count: 1})}>クリア</button>
-                            <button className="bg-amber-700 px-10 h-10 rounded hover:bg-amber-600 transition-colors font-bold tracking-widest shadow-lg">再検索</button>
+                            <button type="button" className="bg-stone-600 px-6 h-10 rounded hover:bg-stone-500 transition-colors font-medium" onClick={() => {
+                                const cleared = {room_id: '', checkin: '', checkout: '', adults: 2, children: 0, room_count: 1};
+                                setSearchQuery(cleared);
+                                applySearch(cleared);
+                            }}>クリア</button>
+                            <button type="button" className="bg-amber-700 px-10 h-10 rounded hover:bg-amber-600 transition-colors font-bold tracking-widest shadow-lg" onClick={() => applySearch()}>再検索</button>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -243,7 +360,8 @@ export default function Create({ rooms, selectedRoomId }: any) {
 
                                         {/* 3. ボタンエリア*/}
                                         <button 
-                                            onClick={() => handleReserve(group.id, option.room_id)}
+                                            type="button"
+                                            onClick={(event) => handleReserve(event, group.id, option.room_id, group.name, option.room_name)}
                                             className="w-40 py-2 bg-stone-800 text-white text-xs tracking-[0.2em] font-bold hover:bg-stone-700 transition-all flex-shrink-0"
                                         >
                                             予約する
@@ -256,17 +374,55 @@ export default function Create({ rooms, selectedRoomId }: any) {
                 </div>
             </section>
 
-            {/* 3. モーダル（この部分を追加してください） */}
+            <StayCalendarModal
+                show={calendarTarget !== null}
+                planId={calendarTarget?.planId ?? 0}
+                roomId={calendarTarget?.roomId ?? 0}
+                planName={calendarTarget?.planName ?? ''}
+                roomName={calendarTarget?.roomName ?? ''}
+                roomCount={searchQuery.room_count}
+                adultCount={searchQuery.adults}
+                childCount={searchQuery.children}
+                onClose={() => setCalendarTarget(null)}
+                onConfirm={handleCalendarConfirm}
+            />
+
             {modalPlan && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-stone-900/80 backdrop-blur-sm" onClick={() => setModalPlan(null)}>
-                    <div className="bg-white max-w-2xl w-full rounded-sm shadow-2xl relative overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setModalPlan(null)} className="absolute top-4 right-4 text-2xl text-stone-400 hover:text-stone-800 z-10">&times;</button>
-                        {/* 修正：画像パスを配列から取得 */}
-                        <img src={modalPlan.room_options[0].room_image} className="w-full h-64 object-cover" />
-                        <div className="p-8">
-                            <h2 className="text-2xl font-light tracking-widest mb-6 border-b pb-4">{modalPlan.name}</h2>
-                            <p className="text-stone-600 leading-loose text-sm whitespace-pre-wrap">{modalPlan.description}</p>
-                            <div className="mt-8 pt-6 border-t text-stone-400 text-[10px]">※ 当プランは大人1名様より承ります。季節によりお料理の内容が異なります。</div>
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-stone-900/80 backdrop-blur-sm"
+                    onClick={() => setModalPlan(null)}
+                >
+                    <div
+                        className="bg-white w-full max-w-4xl max-h-[85vh] rounded-sm shadow-2xl relative flex flex-row overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setModalPlan(null)}
+                            className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-2xl leading-none text-stone-400 hover:text-stone-800"
+                            aria-label="閉じる"
+                        >
+                            &times;
+                        </button>
+
+                        <div className="w-[42%] shrink-0 self-stretch overflow-hidden bg-stone-100">
+                            <img
+                                src={modalPlan.plan_thumbnail || modalPlan.room_options?.[0]?.room_image || '/images/no-image.png'}
+                                className="h-full w-full min-h-[220px] object-cover"
+                                alt={modalPlan.name}
+                            />
+                        </div>
+
+                        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-6 sm:p-8">
+                            <h2 className="mb-4 shrink-0 border-b border-stone-200 pb-3 pr-8 text-xl font-light tracking-widest sm:text-2xl">
+                                {modalPlan.name}
+                            </h2>
+                            <p className="flex-1 whitespace-pre-wrap text-sm leading-relaxed text-stone-600">
+                                {modalPlan.description}
+                            </p>
+                            <div className="mt-6 shrink-0 border-t border-stone-100 pt-4 text-[10px] text-stone-400">
+                                ※ 当プランは大人1名様より承ります。季節によりお料理の内容が異なります。
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -30,7 +30,7 @@ class RoomInventoryService
                 $formattedDate = $date->format('Y-m-d');
 
                 $inventory = RoomInventory::where('room_id', $roomId)
-                    ->where('date', $formattedDate)
+                    ->onDate($formattedDate)
                     ->lockForUpdate()
                     ->first();
 

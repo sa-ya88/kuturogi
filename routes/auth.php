@@ -4,24 +4,23 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\GuestLoginController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store'])
-        ->name("register.email");
-    
-    Route::get('register-sent', function () {
-        return Inertia::render('Auth/RegisterSent');
-    })->name('register.sent');
+        ->name('register.email');
+
+    Route::get('register-sent', [RegisteredUserController::class, 'sent'])
+        ->name('register.sent');
 
     Route::get('register-details', [RegisteredUserController::class, 'showRegistrationForm'])
         ->name('register.details');
@@ -32,7 +31,12 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:login');
+
+    Route::post('guest-login', [GuestLoginController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('guest.login');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

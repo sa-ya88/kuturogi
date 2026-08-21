@@ -12,6 +12,14 @@ class IntegrationWebhookDispatcher
 {
     public function dispatch(string $event, array $payload): void
     {
+        if (config('integration.shared_database')) {
+            Log::debug('Integration webhook skipped: shared database.', [
+                'event' => $event,
+            ]);
+
+            return;
+        }
+
         $url = config('integration.webhook.url');
         $secret = config('integration.webhook.secret');
 
@@ -27,7 +35,7 @@ class IntegrationWebhookDispatcher
             'event' => $event,
             'payload' => $payload,
             'sent_at' => now()->toIso8601String(),
-        ], JSON_THROW_ON_ERROR);
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
 
         $signature = hash_hmac('sha256', $body, $secret);
 
@@ -45,10 +53,21 @@ class IntegrationWebhookDispatcher
         }
 
         try {
-            Http::withHeaders([
+            $response = Http::withHeaders([
                 'X-Kuturogi-Signature' => $signature,
-                'Content-Type' => 'application/json',
-            ])->timeout(5)->post(rtrim($url, '/').$endpoint, json_decode($body, true));
+                'Accept' => 'application/json',
+            ])
+                ->withBody($body, 'application/json')
+                ->timeout(5)
+                ->post(rtrim($url, '/').$endpoint);
+
+            if ($response->failed()) {
+                Log::warning('Integration webhook rejected.', [
+                    'event' => $event,
+                    'endpoint' => $endpoint,
+                    'status' => $response->status(),
+                ]);
+            }
         } catch (\Throwable $e) {
             Log::warning('Integration webhook failed.', [
                 'event' => $event,

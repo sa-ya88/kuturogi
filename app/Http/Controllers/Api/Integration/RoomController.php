@@ -23,10 +23,17 @@ class RoomController extends Controller
             'name' => 'required|string|max:255',
             'price_per_person' => 'required|integer|min:0',
             'stock_count' => 'sometimes|integer|min:0',
-            'available_from' => 'sometimes|date',
-            'available_to' => 'sometimes|date|after_or_equal:available_from',
+            'available_from' => 'sometimes|nullable|date',
+            'available_to' => 'nullable|date|after_or_equal:available_from',
             'description' => 'nullable|string',
             'features' => 'nullable|array',
+            'details' => 'nullable|array',
+            'details.facilities' => 'nullable|array',
+            'details.facilities.*' => 'string|max:100',
+            'details.internet' => 'nullable|string|max:255',
+            'details.smoking' => 'nullable|string|max:255',
+            'details.amenities' => 'nullable|array',
+            'details.amenities.*' => 'string|max:100',
             'images' => 'nullable|array',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
@@ -55,10 +62,17 @@ class RoomController extends Controller
             'name' => 'sometimes|string|max:255',
             'price_per_person' => 'sometimes|integer|min:0',
             'stock_count' => 'sometimes|integer|min:0',
-            'available_from' => 'sometimes|date',
-            'available_to' => 'sometimes|date',
+            'available_from' => 'sometimes|nullable|date',
+            'available_to' => 'nullable|date|after_or_equal:available_from',
             'description' => 'sometimes|string',
             'features' => 'sometimes|array',
+            'details' => 'nullable|array',
+            'details.facilities' => 'nullable|array',
+            'details.facilities.*' => 'string|max:100',
+            'details.internet' => 'nullable|string|max:255',
+            'details.smoking' => 'nullable|string|max:255',
+            'details.amenities' => 'nullable|array',
+            'details.amenities.*' => 'string|max:100',
             'images' => 'sometimes|array',
             'is_active' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer|min:0',
@@ -77,9 +91,9 @@ class RoomController extends Controller
 
     public function destroy(Room $room, RoomImageStorageService $imageStorage): JsonResponse
     {
-        if ($room->reservations()->exists()) {
+        if ($room->hasBlockingReservations()) {
             return response()->json([
-                'message' => '予約が存在するため削除できません。',
+                'message' => $room->deletionBlockedMessage(),
             ], 422);
         }
 

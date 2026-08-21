@@ -34,6 +34,17 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'demo' => [
+                'enabled' => (bool) config('demo.enabled'),
+                'refreshHours' => max(1, (int) config('demo.refresh_hours', 4)),
+                'allowRegistration' => ! (bool) config('demo.enabled')
+                    || (bool) config('demo.allow_registration'),
+                'guestEmail' => (string) config('demo.guest.email'),
+                'guestPassword' => (string) config('demo.guest.password'),
+            ],
+            'flash' => [
+                'success' => $request->session()->get('success'),
+            ],
         ];
     }
 }

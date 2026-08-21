@@ -1,6 +1,8 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import ReservationGuestFields, { reservationFieldId } from '@/Components/ReservationGuestFields';
+import { useState, useMemo, useEffect } from 'react';
+import { PageProps } from '@/types';
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
@@ -10,37 +12,66 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
+const splitPersonName = (value?: string | null): [string, string] => {
+    const trimmed = (value ?? '').trim();
+    if (!trimmed) {
+        return ['', ''];
+    }
+    const parts = trimmed.split(/[\s　]+/, 2);
+
+    return parts.length === 1 ? [parts[0], ''] : [parts[0], parts[1]];
+};
+
 export default function Details({ auth, input, room, plan, optionFees = [], cancelPolicy = [] }: any) {
     const sliderImagesPlan = plan.images?.length ? plan.images : ['/images/room1.webp'];
     const shouldUseSwiperPlan = sliderImagesPlan.length > 1;
     const sliderImagesRoom = room.images?.length ? room.images : ['/images/room1.webp'];
     const shouldUseSwiperRoom = sliderImagesRoom.length > 1;
     const choiceOptions = plan?.choice_options ?? [];
+    const isAuthenticated = Boolean(auth?.user);
+    const allowRegistration = usePage<PageProps>().props.demo?.allowRegistration !== false;
+    const member = auth?.user;
+    const [memberLast, memberFirst] = splitPersonName(member?.name);
+    const [memberLastKana, memberFirstKana] = splitPersonName(member?.name_kana);
 
-    const { data, setData, post, processing, errors, transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm('reservation-details', {
         ...input,
         check_in_date: input?.check_in_date || input?.checkin_date || '',
         check_out_date: input?.check_out_date || input?.checkout_date || '',
-        adult_count: input?.adult_count || 2,
-        child_count: input?.child_count || 0,
-        room_count: input?.room_count || 1,
-        last_name: '',
-        first_name: '',
-        last_name_kana: '',
-        first_name_kana: '',
-        tel: '',
-        email: '',
-        zip_code: '',
-        address: '',
-        building: '',
-        email_magazine: false,
-        register_membership: false,
-        payment_method: 'local', // local(現地決済) or credit(カード)
-        selected_choices: choiceOptions.map((_: any, index: number) => input?.selected_choices?.[index] ?? ''),
-        selected_option_ids: Array.isArray(input?.selected_option_ids) ? input.selected_option_ids : [],
+        adult_count: Number(input?.adult_count ?? 2) || 2,
+        child_count: Number(input?.child_count ?? 0) || 0,
+        room_count: Number(input?.room_count ?? 1) || 1,
+        last_name: input?.last_name || memberLast,
+        first_name: input?.first_name || memberFirst,
+        last_name_kana: input?.last_name_kana || memberLastKana,
+        first_name_kana: input?.first_name_kana || memberFirstKana,
+        tel: input?.tel ?? '',
+        email: input?.email || member?.email || '',
+        zip_code: input?.zip_code || member?.zip_code || '',
+        address: input?.address || member?.address || '',
+        building: input?.building ?? '',
+        email_magazine: input?.email_magazine === true || input?.email_magazine === 1 || input?.email_magazine === '1',
+        register_membership:
+            allowRegistration
+            && (input?.register_membership === true || input?.register_membership === 1 || input?.register_membership === 'on'),
+        payment_method: input?.payment_method === 'credit' ? 'credit' : 'local',
+        selected_choices: choiceOptions.map((_: any, index: number) => {
+            const saved = input?.selected_choices;
+            if (Array.isArray(saved)) {
+                return saved[index] ?? '';
+            }
+            if (saved && typeof saved === 'object') {
+                return saved[index] ?? saved[String(index)] ?? '';
+            }
+
+            return '';
+        }),
+        selected_option_ids: Array.isArray(input?.selected_option_ids)
+            ? input.selected_option_ids.map((id: any) => Number(id))
+            : [],
         representatives: Array.from(
             { length: Math.max(1, Number(input?.room_count) || 1) },
-            (_, index) => input?.representatives?.[index] ?? '',
+            (_, index) => input?.representatives?.[index] ?? (index === 0 ? (member?.name ?? '') : ''),
         ),
     });
 
@@ -139,6 +170,23 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
         }
     };
 
+    const scrollToField = (fieldKey: string) => {
+        window.requestAnimationFrame(() => {
+            const el = document.getElementById(reservationFieldId(fieldKey));
+            if (!el) {
+                return;
+            }
+
+            const header = document.querySelector('nav.fixed');
+            const headerHeight = header instanceof HTMLElement ? header.getBoundingClientRect().height : 104;
+            const top = el.getBoundingClientRect().top + window.scrollY - headerHeight - 16;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+            if (el instanceof HTMLElement) {
+                el.focus({ preventScroll: true });
+            }
+        });
+    };
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -160,36 +208,40 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
             }
         }
 
-        // お客様情報のバリデーション
-        if (!data.last_name?.trim()) {
-            newErrors.last_name = 'お名前（姓）を入力してください';
-        }
-        if (!data.first_name?.trim()) {
-            newErrors.first_name = 'お名前（名）を入力してください';
-        }
-        if (!data.last_name_kana?.trim()) {
-            newErrors.last_name_kana = 'お名前（姓・ひらがな）を入力してください';
-        }
-        if (!data.first_name_kana?.trim()) {
-            newErrors.first_name_kana = 'お名前（名・ひらがな）を入力してください';
-        }
-        if (!data.tel?.trim()) {
-            newErrors.tel = '電話番号を入力してください';
-        }
-        if (!data.email?.trim()) {
-            newErrors.email = 'メールアドレスを入力してください';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
-            newErrors.email = '有効なメールアドレスを入力してください';
-        }
-        if (!data.zip_code?.trim()) {
-            newErrors.zip_code = '郵便番号を入力してください';
-        }
-        if (!data.address?.trim()) {
-            newErrors.address = '住所を入力してください';
+        // お客様情報のバリデーション（会員は登録情報を使うため入力チェックしない）
+        if (!isAuthenticated) {
+            if (!data.last_name?.trim()) {
+                newErrors.last_name = 'お名前（姓）を入力してください';
+            }
+            if (!data.first_name?.trim()) {
+                newErrors.first_name = 'お名前（名）を入力してください';
+            }
+            if (!data.last_name_kana?.trim()) {
+                newErrors.last_name_kana = 'お名前（姓・ひらがな）を入力してください';
+            }
+            if (!data.first_name_kana?.trim()) {
+                newErrors.first_name_kana = 'お名前（名・ひらがな）を入力してください';
+            }
+            if (!data.tel?.trim()) {
+                newErrors.tel = '電話番号を入力してください';
+            }
+            if (!data.email?.trim()) {
+                newErrors.email = 'メールアドレスを入力してください';
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+                newErrors.email = '有効なメールアドレスを入力してください';
+            }
+            if (!data.zip_code?.trim()) {
+                newErrors.zip_code = '郵便番号を入力してください';
+            }
+            if (!data.address?.trim()) {
+                newErrors.address = '住所を入力してください';
+            }
         }
 
         const roomCount = Math.max(1, Number(data.room_count) || 1);
-        const primaryName = `${data.last_name?.trim() ?? ''} ${data.first_name?.trim() ?? ''}`.trim();
+        const primaryName = isAuthenticated
+            ? (member?.name ?? `${data.last_name?.trim() ?? ''} ${data.first_name?.trim() ?? ''}`).trim()
+            : `${data.last_name?.trim() ?? ''} ${data.first_name?.trim() ?? ''}`.trim();
         const representatives = Array.from({ length: roomCount }, (_, index) => {
             if (index === 0) {
                 return (data.representatives?.[index] || primaryName).trim();
@@ -211,6 +263,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
         
         if (Object.keys(newErrors).length > 0) {
             setValidationErrors(newErrors);
+            scrollToField(Object.keys(newErrors)[0]);
             return;
         }
         
@@ -261,7 +314,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             )}
                             <div className="p-8">
                                 <h2 className="text-xl font-bold mb-4">{plan.name}</h2>
-                                <p className="text-sm text-stone-600 leading-loose">{plan.description}</p>
+                                <p className="whitespace-pre-wrap text-sm leading-loose text-stone-600">{plan.description}</p>
                             </div>
                         </div>
 
@@ -335,6 +388,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                 <div>
                                     <label className="block text-sm font-bold mb-2">チェックイン日 <span className="text-red-600">*</span></label>
                                     <input 
+                                        id={reservationFieldId('check_in_date')}
                                         type="date" 
                                         value={data.check_in_date} 
                                         onChange={e => setData('check_in_date', e.target.value)} 
@@ -347,6 +401,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                 <div>
                                     <label className="block text-sm font-bold mb-2">チェックアウト日 <span className="text-red-600">*</span></label>
                                     <input 
+                                        id={reservationFieldId('check_out_date')}
                                         type="date" 
                                         value={data.check_out_date} 
                                         onChange={e => setData('check_out_date', e.target.value)} 
@@ -379,186 +434,18 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             <p className="text-xs text-stone-500 text-center mt-4">
                                 複数室のご予約は同一プラン・各室同じ人数の場合のみ可能です。各部屋に代表者名が必要です。
                             </p>
+                            <p className="text-xs text-stone-500 text-center mt-2">
+                                子供は小学生以下が対象です。中学生以上は大人としてご予約ください。
+                            </p>
                         </div>
 
-                        {/* 5. お客様情報の入力 */}
-                        <div className="bg-white border p-8 space-y-8">
-                            <div className="flex justify-between items-center border-b pb-4">
-                                <h2 className="text-xl font-bold tracking-widest">お客様情報の入力</h2>
-                                {!auth.user && (
-                                    <Link href={route('login')} className="text-xs text-amber-700 border border-amber-700 px-4 py-1 hover:bg-amber-50">
-                                        会員の方はログイン
-                                    </Link>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <label className="block text-sm font-bold">お名前（漢字） <span className="text-red-600">*</span></label>
-                                    <div className="flex gap-2">
-                                        <div className="w-full">
-                                            <input 
-                                                type="text" 
-                                                placeholder="姓" 
-                                                className={`w-full border-stone-300 ${validationErrors.last_name ? 'border-red-500' : ''}`}
-                                                value={data.last_name}
-                                                onChange={e => setData('last_name', e.target.value)} 
-                                            />
-                                            {validationErrors.last_name && (
-                                                <p className="text-red-600 text-xs mt-1">{validationErrors.last_name}</p>
-                                            )}
-                                        </div>
-                                        <div className="w-full">
-                                            <input 
-                                                type="text" 
-                                                placeholder="名" 
-                                                className={`w-full border-stone-300 ${validationErrors.first_name ? 'border-red-500' : ''}`}
-                                                value={data.first_name}
-                                                onChange={e => setData('first_name', e.target.value)} 
-                                            />
-                                            {validationErrors.first_name && (
-                                                <p className="text-red-600 text-xs mt-1">{validationErrors.first_name}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <label className="block text-sm font-bold">お名前（ひらがな） <span className="text-red-600">*</span></label>
-                                    <div className="flex gap-2">
-                                        <div className="w-full">
-                                            <input 
-                                                type="text" 
-                                                placeholder="せい" 
-                                                className={`w-full border-stone-300 ${validationErrors.last_name_kana ? 'border-red-500' : ''}`}
-                                                value={data.last_name_kana}
-                                                onChange={e => setData('last_name_kana', e.target.value)} 
-                                            />
-                                            {validationErrors.last_name_kana && (
-                                                <p className="text-red-600 text-xs mt-1">{validationErrors.last_name_kana}</p>
-                                            )}
-                                        </div>
-                                        <div className="w-full">
-                                            <input 
-                                                type="text" 
-                                                placeholder="めい" 
-                                                className={`w-full border-stone-300 ${validationErrors.first_name_kana ? 'border-red-500' : ''}`}
-                                                value={data.first_name_kana}
-                                                onChange={e => setData('first_name_kana', e.target.value)} 
-                                            />
-                                            {validationErrors.first_name_kana && (
-                                                <p className="text-red-600 text-xs mt-1">{validationErrors.first_name_kana}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {Number(data.room_count) > 1 && (
-                                <div className="space-y-4 border-t pt-6">
-                                    <h3 className="text-sm font-bold tracking-widest">各部屋の代表者名 <span className="text-red-600">*</span></h3>
-                                    <p className="text-xs text-stone-500">1室目は上記お名前を初期値にできます。2室目以降は各部屋の代表者名を入力してください。</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {Array.from({ length: Math.max(1, Number(data.room_count) || 1) }).map((_, index) => (
-                                            <div key={`representative-${index}`}>
-                                                <label className="block text-xs text-stone-500 mb-1">{index + 1}室目</label>
-                                                <input
-                                                    type="text"
-                                                    className={`w-full border-stone-300 ${validationErrors[`representatives_${index}`] ? 'border-red-500' : ''}`}
-                                                    value={data.representatives?.[index] ?? ''}
-                                                    placeholder={index === 0 ? '未入力の場合は上記お名前を使用' : '代表者名'}
-                                                    onChange={(e) => {
-                                                        const next = [...(data.representatives ?? [])];
-                                                        next[index] = e.target.value;
-                                                        setData('representatives', next);
-                                                    }}
-                                                />
-                                                {validationErrors[`representatives_${index}`] && (
-                                                    <p className="text-red-600 text-xs mt-1">{validationErrors[`representatives_${index}`]}</p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold mb-2">電話番号 <span className="text-red-600">*</span></label>
-                                    <input 
-                                        type="tel" 
-                                        placeholder="09012345678" 
-                                        className={`w-full border-stone-300 ${validationErrors.tel ? 'border-red-500' : ''}`}
-                                        value={data.tel}
-                                        onChange={e => setData('tel', e.target.value)} 
-                                    />
-                                    {validationErrors.tel && (
-                                        <p className="text-red-600 text-sm mt-2">{validationErrors.tel}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold mb-2">メールアドレス <span className="text-red-600">*</span></label>
-                                    <input 
-                                        type="email" 
-                                        placeholder="example@mail.com" 
-                                        className={`w-full border-stone-300 ${validationErrors.email ? 'border-red-500' : ''}`}
-                                        value={data.email}
-                                        onChange={e => setData('email', e.target.value)} 
-                                    />
-                                    {validationErrors.email && (
-                                        <p className="text-red-600 text-sm mt-2">{validationErrors.email}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="block text-sm font-bold">住所 <span className="text-red-600">*</span></label>
-                                <div>
-                                    <input 
-                                        type="text" 
-                                        placeholder="郵便番号（ハイフンなし）" 
-                                        className={`w-1/3 border-stone-300 block ${validationErrors.zip_code ? 'border-red-500' : ''}`}
-                                        value={data.zip_code}
-                                        onChange={e => setData('zip_code', e.target.value)} 
-                                    />
-                                    {validationErrors.zip_code && (
-                                        <p className="text-red-600 text-sm mt-1">{validationErrors.zip_code}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <input 
-                                        type="text" 
-                                        placeholder="都道府県・市区町村・番地" 
-                                        className={`w-full border-stone-300 ${validationErrors.address ? 'border-red-500' : ''}`}
-                                        value={data.address}
-                                        onChange={e => setData('address', e.target.value)} 
-                                    />
-                                    {validationErrors.address && (
-                                        <p className="text-red-600 text-sm mt-1">{validationErrors.address}</p>
-                                    )}
-                                </div>
-                                <input 
-                                    type="text" 
-                                    placeholder="建物名・部屋番号" 
-                                    className="w-full border-stone-300" 
-                                    value={data.building}
-                                    onChange={e => setData('building', e.target.value)} 
-                                />
-                            </div>
-
-                            {/* 同意・会員登録の選択 */}
-                            <div className="space-y-3 pt-4 border-t">
-                                <label className="flex items-center gap-3 text-sm cursor-pointer">
-                                    <input type="checkbox" checked={data.email_magazine} onChange={e => setData('email_magazine', e.target.checked)} className="text-stone-800 focus:ring-stone-800" />
-                                    お得な情報（メールマガジン）の配信を希望する
-                                </label>
-                                {!auth.user && (
-                                    <label className="flex items-center gap-3 text-sm cursor-pointer font-bold text-amber-900">
-                                        <input type="checkbox" checked={data.register_membership} onChange={e => setData('register_membership', e.target.checked)} className="text-amber-700 focus:ring-amber-700" />
-                                        予約と同時に会員登録を行う
-                                    </label>
-                                )}
-                            </div>
-                        </div>
+                        <ReservationGuestFields
+                            data={data}
+                            setData={(key, value) => setData(key as any, value as any)}
+                            validationErrors={validationErrors}
+                            isAuthenticated={isAuthenticated}
+                            member={member}
+                        />
 
                         {choiceOptions.length > 0 && (
                             <div className="bg-white border p-8 space-y-6">
@@ -569,6 +456,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                             {option.prompt} <span className="text-red-600">*</span>
                                         </label>
                                         <select
+                                            id={reservationFieldId(`selected_choices_${index}`)}
                                             value={data.selected_choices[index] ?? ''}
                                             onChange={(e) => {
                                                 const next = [...(data.selected_choices ?? [])];
@@ -635,7 +523,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                     <input type="radio" name="payment" value="credit" checked={data.payment_method === 'credit'} onChange={e => setData('payment_method', e.target.value)} className="text-stone-800" />
                                     <div>
                                         <span className="font-bold">クレジットカード（オンライン決済）</span>
-                                        <p className="text-xs text-stone-500">次の確認画面でカード情報を入力し、与信（仮売上）を行います。チェックイン時に売上確定します。</p>
+                                        <p className="text-xs text-stone-500">次の確認画面でカード情報を入力してください。チェックイン時に引き落としが確定します。</p>
                                     </div>
                                 </label>
                             </div>
@@ -644,11 +532,8 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                 <div className="mt-6 p-6 bg-stone-50 border-l-2 border-stone-300">
                                     <h3 className="text-xs font-bold text-stone-800 mb-3 tracking-widest uppercase">お支払いに関する注意事項</h3>
                                     <ul className="text-[11px] text-stone-600 space-y-2 list-disc list-inside leading-relaxed">
-                                        <li>カード情報は次の確認画面で Stripe の安全な入力フォームへご入力ください。</li>
-                                        <li>予約確定時は与信（仮売上）のみ行い、チェックイン時に売上を確定します。</li>
                                         <li>ご利用いただけるカードは、VISA、Mastercard、JCB、AMEX、Dinersとなります。</li>
                                         <li>キャンセル規定に基づきキャンセル料が発生する場合、登録済みのカードより引き落としさせていただくことがあります。</li>
-                                        <li>デビットカードやプリペイド式カードをご利用の場合、一時的に二重引き落としが生じる可能性があるため推奨しておりません。</li>
                                     </ul>
                                 </div>
                             )}
