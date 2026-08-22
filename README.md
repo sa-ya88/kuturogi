@@ -32,6 +32,19 @@ php artisan serve
 
 `.env` に Stripe の **テストキー** を設定してください。キーはリポジトリに含めません。
 
+## ロリポップへの公開
+
+Laravel の公開ディレクトリは **`public/`** です。プロジェクト一式をそのまま `web` に置くと、`/login` や CSS/JS がファイルとして探されて **404 が多発**します。
+
+1. コントロールパネルで PHP を **8.3 以上**にする（このアプリは PHP 8.3 必須）。
+2. 公開フォルダを **`public`** にする（サイト設定）。変えられない場合は、リポジトリ直下の `.htaccess` が `public/` へ転送します。再アップロードしてください。
+3. サーバ上で `composer install --no-dev`。`vendor/` なしでは動きません。
+4. ローカルで `npm run build` した **`public/build`** を必ずアップロードする（`.gitignore` 対象のため Git だけでは含まれません）。
+5. `.env` の `APP_URL` を実際のサイト URL にする。`public/hot` はアップロードしない。
+6. `storage` と `bootstrap/cache` を書き込み可能にする。
+
+サブディレクトリ公開（例: `https://xxx.jp/kuturogi/`）のときは `APP_URL` と `ASSET_URL` をその URL に合わせ、`public/.htaccess` の `RewriteBase` を有効にしてください。
+
 ローカルのメール送信は既定で `MAIL_MAILER=log` です。会員登録のマジックリンクは `storage/logs/laravel.log` に出ます。ログには問い合わせ本文やメールアドレスは書きません（件名と文字数、エラー時の予約 ID など識別子のみ）。
 
 ## 環境変数
@@ -41,9 +54,7 @@ php artisan serve
 | `SHARED_DATABASE` | `true` で管理画面と同じ DB。Webhook を送らない |
 | `DB_DATABASE` | admin の SQLite パス（例: `/workspaces/kuturogi-admin/database/database.sqlite`） |
 | `DEMO_MODE` | 注意書き・会員登録停止・定期初期化の案内（既定 `true`） |
-| `DEMO_REFRESH_HOURS` | データ初期化間隔の表示用（時間、既定 4）。実処理は **kuturogi-admin** の `php artisan demo:refresh`（cron） |
-
-ロリポップでは、顧客サイトではなく **管理システム（kuturogi-admin）** に cron を設定します。同じ DB を共有しているため、admin を初期化すれば予約サイトのデモ予約も戻ります。手順は kuturogi-admin の README「ロリポップでの cron 設定」を参照してください。
+| `DEMO_REFRESH_HOURS` | データ初期化間隔の表示用（時間、既定 4）。実処理は kuturogi-admin の `php artisan demo:refresh`（cron）。ロリポップでは管理画面側に cron を設定する |
 | `STRIPE_KEY` / `STRIPE_SECRET` | テストモードの公開鍵・秘密鍵 |
 | `INTEGRATION_API_KEY` | 管理画面連携 API（未設定なら 503） |
 

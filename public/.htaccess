@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # サブディレクトリ公開のときは、下のコメントを外してパスを合わせる
+    # RewriteBase /public/
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

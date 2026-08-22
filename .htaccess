@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 公開フォルダをプロジェクト直下にした場合、Laravel の入口は public/ のみ
+    RewriteRule ^$ public/index.php [L]
+    RewriteRule ^((?!public/).*)$ public/$1 [L]
+</IfModule>
+
+<FilesMatch "^\.env">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
