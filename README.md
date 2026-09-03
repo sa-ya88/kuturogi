@@ -35,6 +35,23 @@
 - 管理画面向け連携 API / Webhook
 - 公開デモ向けの注意書きとゲストログイン
 
+## セットアップ
+
+顧客サイトは **kuturogi-admin と同じ SQLite** を使っています。マイグレーションとシーダーは管理画面側だけで実行します。
+
+```bash
+cp .env.example .env
+composer install
+npm install
+php artisan key:generate
+npm run build
+php artisan serve
+```
+
+`.env` の `DB_DATABASE` を kuturogi-admin の `database/database.sqlite` に合わせます。Stripe のテストキーはリポジトリに含めず、`.env` に設定します。
+
+ローカルのメールは既定で `MAIL_MAILER=log` です。会員登録のマジックリンクは `storage/logs/laravel.log` に出ます。ログには問い合わせ本文やメールアドレスは書きません。
+
 ## 環境変数
 
 | 変数 | 用途 |
@@ -45,7 +62,6 @@
 | `DEMO_REFRESH_HOURS` | 初期化間隔の表示用（時間、既定 4）。実処理は admin の `php artisan demo:refresh` |
 | `STRIPE_KEY` / `STRIPE_SECRET` | テストモードの公開鍵・秘密鍵 |
 | `INTEGRATION_API_KEY` | 管理画面連携 API（未設定なら 503） |
-
 
 ## 構成
 
