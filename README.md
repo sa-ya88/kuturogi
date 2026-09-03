@@ -35,25 +35,6 @@
 - 管理画面向け連携 API / Webhook
 - 公開デモ向けの注意書きとゲストログイン
 
-## セットアップ
-
-顧客サイトは **kuturogi-admin と同じ SQLite** を使います。マイグレーションとシーダーは管理画面側だけで実行してください。こちらで `migrate --seed` するとスキーマが分かれ、予約が同期されません。
-
-```bash
-cp .env.example .env
-composer install
-npm install
-php artisan key:generate
-npm run build
-php artisan serve
-```
-
-`.env` の `DB_DATABASE` を kuturogi-admin の `database/database.sqlite` に合わせてください。Stripe のテストキーはリポジトリに含めません。`.env` に設定します。
-
-依存関係が壊れているときは `rm -rf vendor && composer install` を実行してください。Xdebug の接続警告が出る場合は `XDEBUG_MODE=off php artisan serve` で起動できます。
-
-ローカルのメールは既定で `MAIL_MAILER=log` です。会員登録のマジックリンクは `storage/logs/laravel.log` に出ます。ログには問い合わせ本文やメールアドレスは書きません。
-
 ## 環境変数
 
 | 変数 | 用途 |
@@ -65,7 +46,6 @@ php artisan serve
 | `STRIPE_KEY` / `STRIPE_SECRET` | テストモードの公開鍵・秘密鍵 |
 | `INTEGRATION_API_KEY` | 管理画面連携 API（未設定なら 503） |
 
-`APP_DEBUG=true` はローカル専用です。公開デモでは `false` にしてください。
 
 ## 構成
 
