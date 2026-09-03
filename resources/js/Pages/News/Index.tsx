@@ -1,9 +1,8 @@
-// resources/js/Pages/News/Index.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
 export default function NewsIndex({ news }: any) {
-    // 日付をフォーマットする関数
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('ja-JP', {
@@ -17,7 +16,6 @@ export default function NewsIndex({ news }: any) {
         <GuestLayout>
             <Head title="ニュース" />
 
-            {/* ヒーローセクション */}
             <section className="pt-32 pb-16 bg-[#2d2a26] text-white">
                 <div className="max-w-7xl mx-auto px-4 text-center">
                     <h1 className="text-4xl font-light tracking-[0.2em] mb-4">ニュース</h1>
@@ -25,13 +23,12 @@ export default function NewsIndex({ news }: any) {
                 </div>
             </section>
 
-            {/* ニュース一覧セクション */}
             <section className="py-20 max-w-3xl mx-auto px-4">
                 {news && news.length > 0 ? (
                     <div className="space-y-6">
                         {news.map((article: any) => (
-                            <div 
-                                key={article.id} 
+                            <div
+                                key={article.id}
                                 className="bg-white border border-stone-200 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer group"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -53,8 +50,8 @@ export default function NewsIndex({ news }: any) {
                                     </div>
                                     {article.image && (
                                         <div className="w-full sm:w-32 h-24 flex-shrink-0 overflow-hidden rounded-lg">
-                                            <img 
-                                                src={article.image} 
+                                            <img
+                                                src={article.image}
                                                 alt={article.title}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />

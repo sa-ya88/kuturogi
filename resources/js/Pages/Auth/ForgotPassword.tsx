@@ -27,12 +27,11 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
             <section className="py-20 max-w-md mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm space-y-6">
-                    
+
                     <p className="text-stone-600 text-sm leading-relaxed font-serif">
                         ご入力いただいたメールアドレス宛に、パスワードの再設定用URLを記載したメールをお送りいたします。メールの案内手順に沿って、新しいパスワードを設定してください。
                     </p>
 
-                    {/* 送信完了時のメッセージ表示 */}
                     {status && (
                         <div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm text-center rounded tracking-wider">
                             {status}

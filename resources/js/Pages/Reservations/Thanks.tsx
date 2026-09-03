@@ -31,8 +31,8 @@ export default function Thanks() {
                         お気軽にお問い合わせください。
                     </p>
                     <div className="space-y-4">
-                        <Link 
-                            href="/" 
+                        <Link
+                            href="/"
                             className="inline-block bg-stone-800 text-white px-8 py-3 tracking-widest hover:bg-stone-700 transition-colors"
                         >
                             トップページへ戻る

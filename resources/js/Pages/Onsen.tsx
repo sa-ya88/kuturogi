@@ -1,4 +1,3 @@
-// resources/js/Pages/Onsen.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
@@ -15,7 +14,7 @@ export default function Onsen() {
             </section>
 
             <section className="py-20 max-w-5xl mx-auto px-4 space-y-32">
-                {/* 内湯 */}
+
                 <div className="flex flex-col md:flex-row-reverse items-center gap-12">
                     <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
                         <img src="/images/onsen1.webp" alt="大浴場" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
@@ -29,7 +28,6 @@ export default function Onsen() {
                     </div>
                 </div>
 
-                {/* 露天風呂 */}
                 <div className="flex flex-col md:flex-row items-center gap-12">
                     <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
                         <img src="/images/onsen2.webp" alt="露天風呂" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />
@@ -43,7 +41,6 @@ export default function Onsen() {
                     </div>
                 </div>
 
-                {/* 内湯 */}
                 <div className="flex flex-col md:flex-row-reverse items-center gap-12">
                     <div className="w-full md:w-1/2 overflow-hidden shadow-lg">
                         <img src="/images/onsen3.webp" alt="大浴場" className="hover:scale-105 transition duration-700 h-80 w-full object-cover" />

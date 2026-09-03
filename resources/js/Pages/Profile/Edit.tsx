@@ -3,16 +3,9 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 import DemoNotice from '@/Components/DemoNotice';
 
-interface Props {
-    mustVerifyEmail?: boolean;
-    status?: string;
-}
-
-export default function Edit({ mustVerifyEmail, status }: Props) {
-    // Laravelのコントローラーからログイン中のユーザーデータをProps経由で取得
+export default function Edit() {
     const user = usePage().props.auth.user as any;
 
-    // 編集フォームの初期値に現在のユーザー情報をセット
     const { data, setData, patch, processing, errors, recentlySuccessful } = useForm({
         name: user.name || '',
         name_kana: user.name_kana || '',
@@ -29,11 +22,10 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        // Laravelの profile.update ルートへPATCH送信（標準の保存処理をそのまま活用）
         patch(route('profile.update'), {
             preserveScroll: true,
             onSuccess: () => {
-                // パスワード入力欄だけをリセット
+
                 setData((prev) => ({
                     ...prev,
                     current_password: '',
@@ -60,8 +52,7 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
             <section className="py-20 max-w-2xl mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
                     <DemoNotice />
-                    
-                    {/* 保存完了時のトーストメッセージ */}
+
                     {recentlySuccessful && (
                         <div className="mb-6 p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 text-sm text-center rounded tracking-wider">
                             会員情報を更新いたしました。
@@ -69,11 +60,10 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
                     )}
 
                     <form onSubmit={submit} className="space-y-8">
-                        
-                        {/* 基本情報セクション */}
+
                         <div className="space-y-6">
                             <h3 className="text-lg font-medium border-b border-stone-100 pb-2 tracking-wide text-stone-800">基本情報</h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium text-stone-700">お名前</label>
@@ -115,10 +105,9 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
                             </div>
                         </div>
 
-                        {/* 住所情報セクション */}
                         <div className="space-y-6 pt-4">
                             <h3 className="text-lg font-medium border-b border-stone-100 pb-2 tracking-wide text-stone-800">ご連絡先・住所</h3>
-                            
+
                             <div>
                                 <label htmlFor="zip_code" className="block text-sm font-medium text-stone-700">郵便番号</label>
                                 <input id="zip_code" type="text" value={data.zip_code} required placeholder="1234567" onChange={(e) => setData('zip_code', e.target.value)} className={inputClassName} />
@@ -132,11 +121,10 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
                             </div>
                         </div>
 
-                        {/* セキュリティセクション（必要な場合のみ入力） */}
                         <div className="space-y-6 pt-4">
                             <h3 className="text-lg font-medium border-b border-stone-100 pb-2 tracking-wide text-stone-800">パスワードの変更</h3>
                             <p className="text-xs text-stone-500 font-serif">※パスワードを変更する場合のみご入力ください。</p>
-                            
+
                             <div>
                                 <label htmlFor="current_password" className="block text-sm font-medium text-stone-700">現在のパスワード</label>
                                 <input id="current_password" type="password" value={data.current_password} onChange={(e) => setData('current_password', e.target.value)} className={inputClassName} />
@@ -158,7 +146,6 @@ export default function Edit({ mustVerifyEmail, status }: Props) {
                             </div>
                         </div>
 
-                        {/* 更新ボタン */}
                         <div className="pt-6 border-t border-stone-100">
                             <button
                                 type="submit"

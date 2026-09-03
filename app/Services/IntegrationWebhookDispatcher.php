@@ -5,9 +5,6 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-/**
- * kuturogi → kuturogi-admin への Webhook 送信。
- */
 class IntegrationWebhookDispatcher
 {
     public function dispatch(string $event, array $payload): void

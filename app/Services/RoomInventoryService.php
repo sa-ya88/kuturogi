@@ -7,11 +7,6 @@ use Illuminate\Support\Facades\DB;
 
 class RoomInventoryService
 {
-    /**
-     * 指定期間の在庫を増減する（チェックアウト日は含まない）。
-     *
-     * @throws \RuntimeException 在庫不足時
-     */
     public function adjustForStay(
         int $roomId,
         string $checkinDate,

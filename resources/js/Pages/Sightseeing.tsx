@@ -1,4 +1,3 @@
-// resources/js/Pages/Sightseeing.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 

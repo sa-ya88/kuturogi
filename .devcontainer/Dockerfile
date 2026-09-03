@@ -5,8 +5,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get install -y mariadb-client \ 
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
-# Install php-mysql driver
 RUN docker-php-ext-install mysqli pdo pdo_mysql
+
+RUN echo "xdebug.mode=off" > /usr/local/etc/php/conf.d/zz-xdebug-off.ini
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \

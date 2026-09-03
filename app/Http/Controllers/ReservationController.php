@@ -179,7 +179,6 @@ class ReservationController extends Controller
                     ->withErrors(['reservation' => '予約内容の確認セッションが切れました。最初からやり直してください。']);
             }
 
-            // Stripe return_url のクエリを入力へ引き継ぎ（与信済み PI の再開用）
             foreach (['payment_intent', 'payment_intent_client_secret', 'redirect_status'] as $key) {
                 if ($request->filled($key)) {
                     $input[$key] = $request->query($key);

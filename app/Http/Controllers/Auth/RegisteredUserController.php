@@ -12,28 +12,19 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\Log;
 
 class RegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): Response
     {
         return Inertia::render('Auth/Register');
     }
 
-    /**
-     * Handle an incoming registration request (Step 1: Send magic link).
-     *
-     * @throws ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
         if ($redirect = $this->closedRegistrationRedirect()) {
@@ -48,10 +39,8 @@ class RegisteredUserController extends Controller
         Notification::route('mail', $request->email)
             ->notify(new RegistrationMagicLink($request->email));
 
-        // 【ここを修正】back() ではなく、専用の完了画面ルートへ確実にリダイレクトさせます
         return redirect()->route('register.sent');
     }
-
 
     public function sent(): Response|RedirectResponse
     {
@@ -62,9 +51,6 @@ class RegisteredUserController extends Controller
         return Inertia::render('Auth/RegisterSent');
     }
 
-    /**
-     * Display the registration details form (Step 2).
-     */
     public function showRegistrationForm(Request $request): Response|RedirectResponse
     {
         if ($redirect = $this->closedRegistrationRedirect()) {
@@ -79,9 +65,6 @@ class RegisteredUserController extends Controller
         ]);
     }
 
-    /**
-     * Complete registration (Step 3).
-     */
     public function completeRegistration(Request $request): RedirectResponse
     {
         if ($redirect = $this->closedRegistrationRedirect()) {

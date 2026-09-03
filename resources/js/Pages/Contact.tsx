@@ -1,4 +1,3 @@
-// resources/js/Pages/Contact.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
@@ -6,7 +5,7 @@ import DemoNotice from '@/Components/DemoNotice';
 import { dummyContact } from '@/data/demoDummy';
 
 export default function Contact() {
-    // フォームの状態管理
+
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
@@ -14,7 +13,6 @@ export default function Contact() {
         message: '',
     });
 
-    // 送信処理
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         post(route('contact.send'));
@@ -36,7 +34,7 @@ export default function Contact() {
                     }}
                 />
                 <form onSubmit={submit} className="space-y-6">
-                    {/* お名前 */}
+
                     <div>
                         <label className="block text-sm font-medium text-stone-700">お名前</label>
                         <input
@@ -49,7 +47,6 @@ export default function Contact() {
                         {errors.name && <div className="text-red-600 text-sm mt-1">{errors.name}</div>}
                     </div>
 
-                    {/* メールアドレス */}
                     <div>
                         <label className="block text-sm font-medium text-stone-700">メールアドレス</label>
                         <input
@@ -62,7 +59,6 @@ export default function Contact() {
                         {errors.email && <div className="text-red-600 text-sm mt-1">{errors.email}</div>}
                     </div>
 
-                    {/* 件名 */}
                     <div>
                         <label className="block text-sm font-medium text-stone-700">お問い合わせ項目</label>
                         <select
@@ -77,7 +73,6 @@ export default function Contact() {
                         </select>
                     </div>
 
-                    {/* 内容 */}
                     <div>
                         <label className="block text-sm font-medium text-stone-700">お問い合わせ内容</label>
                         <textarea

@@ -16,11 +16,11 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable();
             $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
             $table->foreignId('room_id')->constrained()->cascadeOnDelete();
-            $table->date('checkin_date');   // チェックイン日
-            $table->date('checkout_date');  // チェックアウト日
-            $table->integer('guest_count'); // 宿泊人数
-            $table->integer('total_price'); // 合計金額
-            $table->string('status')->default('pending'); // 予約状態（確定・キャンセル待ち等）
+            $table->date('checkin_date');
+            $table->date('checkout_date');
+            $table->integer('guest_count');
+            $table->integer('total_price');
+            $table->string('status')->default('pending');
             $table->string('guest_name')->nullable();
             $table->string('guest_name_kana')->nullable();
             $table->string('guest_tel')->nullable();

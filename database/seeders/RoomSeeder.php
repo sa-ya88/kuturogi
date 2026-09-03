@@ -2,15 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Room;
 use Illuminate\Database\Seeder;
-use \App\Models\Room;
 
 class RoomSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $rooms = [
@@ -68,7 +64,6 @@ class RoomSeeder extends Seeder
             ],
         ];
 
-        // 1件ずつ取り出して保存
         foreach ($rooms as $roomData) {
             Room::create($roomData);
         }

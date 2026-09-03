@@ -1,4 +1,3 @@
-// resources/js/Pages/Reservations/Confirm.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
@@ -362,7 +361,6 @@ function CreditConfirm(props: ConfirmProps & {
         }
 
         const returnUrl = (() => {
-            // Ziggy の route() は絶対URLを返すことがあるため、必ず現在オリジンの有効なURLにする
             const named = route('reservations.confirm', {}, false);
             const path = named.startsWith('http')
                 ? new URL(named).pathname

@@ -16,11 +16,6 @@ Route::get('/user', function (Request $request) {
 
 Route::get('/rooms', [RoomController::class, 'index']);
 
-/*
-|--------------------------------------------------------------------------
-| kuturogi-admin 連携 API（社内システム専用）
-|--------------------------------------------------------------------------
-*/
 Route::prefix('integration')
     ->middleware('integration.api')
     ->group(function () {

@@ -1,4 +1,3 @@
-// resources/js/Pages/Access.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
@@ -13,10 +12,9 @@ export default function Access() {
                     <p className="text-stone-400 tracking-widest text-sm md:text-base">どうぞ道中、移ろう景色を眺めながら、お気をつけてお越しくださいませ。</p>
                 </div>
             </section>
-            
+
             <section className="py-20 max-w-4xl mx-auto px-4">
-                
-                {/* Google Map 埋め込みエリア（山奥の深い緑の座標を設定） */}
+
                 <div className="w-full h-96 mb-12 overflow-hidden rounded shadow-sm border border-stone-200">
                     <iframe
                         src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d36944.07453943351!2d138.03096507307765!3d35.071094753153396!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x601bb6ce8cb0c32f%3A0xfcfa66ebdf6f1655!2z6Z2Z5bKh55yM!5e0!3m2!1sja!2sjp!4v1784728452916!5m2!1sja!2sjp"
@@ -29,13 +27,12 @@ export default function Access() {
                     />
                 </div>
 
-                {/* 施設概要・インフォメーション */}
                 <div className="bg-stone-50 p-8 rounded-lg border border-stone-200 mb-16">
                     <h2 className="text-xl font-light tracking-widest mb-6 text-stone-800 text-center md:text-left">山彦旅館 LUTUROGI</h2>
                     <dl className="grid grid-cols-1 md:grid-cols-[120px_1fr] gap-x-4 gap-y-4 text-sm text-stone-600">
                         <dt className="font-bold md:border-r md:border-stone-300 md:pr-4">所在地</dt>
                         <dd>〒000-0000 静岡県隠れ里郡山奥町字緑渓谷 108-5</dd>
-                        
+
                         <dt className="font-bold md:border-r md:border-stone-300 md:pr-4">電話番号</dt>
                         <dd>050-0000-0000</dd>
 
@@ -46,7 +43,6 @@ export default function Access() {
                     </dl>
                 </div>
 
-                {/* 交通手段別の案内 */}
                 <div className="grid md:grid-cols-2 gap-12">
                     <div>
                         <h3 className="border-b border-stone-300 pb-2 mb-4 font-bold text-stone-800">お車でお越しの方</h3>

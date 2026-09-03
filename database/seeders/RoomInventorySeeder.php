@@ -11,10 +11,7 @@ class RoomInventorySeeder extends Seeder
 {
     public function run()
     {
-        // 全ての部屋を取得
         $rooms = Room::all();
-
-        // 今日から365日分
         $startDate = Carbon::today();
         $endDate = Carbon::today()->addDays(365);
 

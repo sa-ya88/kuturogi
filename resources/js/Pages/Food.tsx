@@ -1,4 +1,3 @@
-// resources/js/Pages/Food.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
@@ -14,10 +13,8 @@ export default function Food() {
                 </div>
             </section>
 
-            {/* コンテンツセクション */}
             <section className="py-20 max-w-7xl mx-auto px-4 md:px-8 space-y-32">
-                
-                {/* 夕食セクション */}
+
                 <div className="space-y-12">
                     <div className="text-center max-w-2xl mx-auto">
                         <span className="text-xs tracking-[0.3em] text-stone-400 uppercase block mb-3">— Dinner —</span>
@@ -38,7 +35,6 @@ export default function Food() {
                     </div>
                 </div>
 
-                {/* 朝食セクション */}
                 <div className="space-y-12">
                     <div className="text-center max-w-2xl mx-auto">
                         <span className="text-xs tracking-[0.3em] text-stone-400 uppercase block mb-3">— Breakfast —</span>
@@ -49,7 +45,6 @@ export default function Food() {
                         </p>
                     </div>
 
-                    {/* 朝食は1枚のため、中央配置の大きめなレイアウトに変更 */}
                     <div className="max-w-4xl mx-auto">
                         <div className="h-64 md:h-80 overflow-hidden rounded shadow-sm">
                             <img src="/images/morning1.webp" alt="朝食バイキングのイメージ" className="w-full h-full object-cover transition duration-700" />

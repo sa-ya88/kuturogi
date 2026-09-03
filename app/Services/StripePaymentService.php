@@ -49,7 +49,6 @@ class StripePaymentService
             'amount' => $amountYen,
             'currency' => 'jpy',
             'capture_method' => 'manual',
-            // カード与信のみ（redirect系PMとの setup_future_usage 衝突を避ける）
             'payment_method_types' => ['card'],
             'setup_future_usage' => 'off_session',
             'metadata' => $metadata,

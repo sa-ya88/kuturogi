@@ -1,4 +1,3 @@
-// resources/js/Pages/Rooms/Show.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link } from '@inertiajs/react';
 
@@ -56,17 +55,17 @@ export default function Show({ room }: { room: Room }) {
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-                    {/* 左側：画像スライダー*/}
+
                     <div className="overflow-hidden rounded-sm shadow-xl hover:shadow-2xl transition-shadow duration-500 bg-stone-200">
                         <Swiper
                             modules={[Navigation, Pagination, Autoplay, EffectFade]}
                             effect="fade"
                             fadeEffect={{
-                                crossFade: true // 画像が重なりながらふわっと入れ替わる
+                                crossFade: true
                             }}
-                            speed={4000} // 切り替わるスピード
+                            speed={4000}
                             autoplay={{
-                                delay: 5000, // 次の画像へ行くまでの待ち時間
+                                delay: 5000,
                                 disableOnInteraction: false,
                             }}
                             navigation
@@ -76,20 +75,19 @@ export default function Show({ room }: { room: Room }) {
                         >
                             {room.images.map((image, index) => (
                                 <SwiperSlide key={index}>
-                                    <img 
-                                        src={image} 
-                                        alt={room.name} 
-                                        className="w-full h-full object-cover" 
+                                    <img
+                                        src={image}
+                                        alt={room.name}
+                                        className="w-full h-full object-cover"
                                     />
                                 </SwiperSlide>
                             ))}
                         </Swiper>
                     </div>
 
-                    {/* 右側：情報 */}
                     <div className="flex flex-col">
                         <h1 className="text-4xl font-light tracking-widest mb-6">{room.name}</h1>
-                        
+
                         <p className="text-stone-600 leading-loose mb-12 whitespace-pre-wrap">
                             {room.description}
                         </p>
@@ -111,10 +109,9 @@ export default function Show({ room }: { room: Room }) {
                         </div>
                         )}
 
-                        {/* 予約ボタン */}
                         <div className="border-t border-stone-200 pt-8">
-                             <Link 
-                                href={route('reservations.create', { room_id: room.id })} 
+                             <Link
+                                href={route('reservations.create', { room_id: room.id })}
                                 className="block w-full text-center bg-stone-800 text-white py-4 tracking-widest hover:bg-stone-700 transition">
                                     空室確認・予約に進む
                             </Link>

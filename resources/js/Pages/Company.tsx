@@ -1,4 +1,3 @@
-// resources/js/Pages/Company.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
@@ -6,9 +5,9 @@ export default function Company() {
     const info = [
         { label: '屋号', value: 'くつろぎの宿' },
         { label: '会社名', value: '株式会社くつろぎリゾート' },
-        { 
-            label: '所在地', 
-            value: '〒000-0000\n静岡県隠れ里郡山奥町字緑渓谷 108-5' 
+        {
+            label: '所在地',
+            value: '〒000-0000\n静岡県隠れ里郡山奥町字緑渓谷 108-5'
         },
         { label: 'TEL', value: '011-000-0000' },
         { label: 'FAX', value: '011-000-0000' },
@@ -26,14 +25,14 @@ export default function Company() {
                     <p className="text-stone-400 tracking-widest text-sm md:text-base">すべて架空の情報です。</p>
                 </div>
             </section>
-            
+
             <section className="py-20 max-w-3xl mx-auto px-4">
                 <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                     <table className="w-full text-left border-collapse">
                         <tbody>
                             {info.map((item, i) => (
-                                <tr 
-                                    key={i} 
+                                <tr
+                                    key={i}
                                     className="border-b border-stone-100 last:border-none transition-colors hover:bg-stone-50/30"
                                 >
                                     <th className="w-1/3 px-6 py-5 font-medium text-stone-800 bg-stone-50/50 align-top border-r border-stone-100 select-none">

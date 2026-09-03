@@ -1,4 +1,3 @@
-// resources/js/Layouts/GuestLayout.tsx
 import { PageProps } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
@@ -12,10 +11,10 @@ export default function GuestLayout({ children }: PropsWithChildren) {
 
     return (
         <div className="min-h-screen bg-[#f8f5f0] text-gray-800 font-serif">
-            {/* ヘッダー */}
+
             <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* 1段目: 会員メニュー */}
+
                     <div className="flex justify-between items-center h-10 border-b border-gray-100 text-xs tracking-widest gap-4">
                         {demo?.enabled ? (
                             <p className="text-[10px] sm:text-xs text-amber-800 leading-tight">
@@ -54,7 +53,6 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                         )}
                     </div>
 
-                    {/* 2段目: サイトメニュー */}
                     <div className="flex justify-between h-16 items-center gap-4">
                         <Link href="/" className="text-xl font-bold tracking-widest">
                             山彦旅館 KUTUROGI
@@ -83,21 +81,18 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                 </div>
             </nav>
 
-            {/* 各ページの中身 */}
             <main>{children}</main>
 
-            {/* フッター */}
             <footer className="bg-stone-800 text-white py-12 mt-20">
                 <div className="max-w-7xl mx-auto px-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                        {/* 施設情報 */}
+
                         <div>
                             <h4 className="text-sm font-bold tracking-widest mb-4">くつろぎの宿</h4>
                             <p className="text-xs text-stone-400">山彦旅館 KUTUROGI</p>
                             <p className="text-xs text-stone-400 mt-2">心の癒しと安らぎをお届けする</p>
                         </div>
 
-                        {/* 施設情報リンク */}
                         <div>
                             <h4 className="text-sm font-bold tracking-widest mb-4">施設情報</h4>
                             <ul className="space-y-2 text-xs">
@@ -108,7 +103,6 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                             </ul>
                         </div>
 
-                        {/* サポート */}
                         <div>
                             <h4 className="text-sm font-bold tracking-widest mb-4">サポート</h4>
                             <ul className="space-y-2 text-xs">
@@ -118,7 +112,6 @@ export default function GuestLayout({ children }: PropsWithChildren) {
                             </ul>
                         </div>
 
-                        {/* 会社情報 */}
                         <div>
                             <h4 className="text-sm font-bold tracking-widest mb-4">会社情報</h4>
                             <ul className="space-y-2 text-xs">

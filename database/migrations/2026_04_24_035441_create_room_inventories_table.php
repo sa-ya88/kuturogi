@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('room_inventories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained()->onDelete('cascade'); // 部屋
-            $table->date('date'); // 日付
-            $table->integer('remains')->default(0); // 残り室数
+            $table->foreignId('room_id')->constrained()->onDelete('cascade');
+            $table->date('date');
+            $table->integer('remains')->default(0);
             $table->timestamps();
-            $table->unique(['room_id', 'date']); //ユニーク制約
+            $table->unique(['room_id', 'date']);
         });
     }
 

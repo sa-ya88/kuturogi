@@ -30,9 +30,6 @@ class ReservationController extends Controller
         return response()->json($query->paginate(50));
     }
 
-    /**
-     * 社内システムから予約を作成し、在庫を即時ブロックする。
-     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -82,15 +79,9 @@ class ReservationController extends Controller
             ]);
         });
 
-        // admin 起点の作成は API レスポンスで同期済みのため、Webhook は送らない
-        // （artisan serve 単スレッド時の admin↔kuturogi デッドロック回避）
-
         return response()->json($reservation->load(['plan', 'room']), 201);
     }
 
-    /**
-     * admin からの決済状態同期。
-     */
     public function updatePayment(Request $request, Reservation $reservation): JsonResponse
     {
         $validated = $request->validate([
@@ -113,9 +104,6 @@ class ReservationController extends Controller
         ]);
     }
 
-    /**
-     * 予約キャンセル + 在庫復元。
-     */
     public function cancel(Reservation $reservation): JsonResponse
     {
         if ($reservation->status === 'cancelled') {
@@ -135,9 +123,6 @@ class ReservationController extends Controller
 
             $reservation->update(['status' => 'cancelled']);
         });
-
-        // admin 起点のキャンセルは呼び出し元で状態更新済みのため、Webhook は送らない
-        // （artisan serve 単スレッド時の admin↔kuturogi デッドロック回避）
 
         return response()->json([
             'status' => 'ok',

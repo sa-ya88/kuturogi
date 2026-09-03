@@ -26,5 +26,4 @@ return Application::configure(basePath: dirname(__DIR__))
         NormalizeRoomImagesCommand::class,
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
     })->create();

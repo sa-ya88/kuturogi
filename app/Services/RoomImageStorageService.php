@@ -150,11 +150,7 @@ class RoomImageStorageService
         }
     }
 
-    /**
-     * 既存の画像ファイル名を room_{id}_{n} 形式へ揃える。
-     *
-     * @return array{updated: int, skipped: list<string>}
-     */
+    /** @return array{updated: int, skipped: list<string>} */
     public function normalizeExistingRoomImages(): array
     {
         $updated = 0;

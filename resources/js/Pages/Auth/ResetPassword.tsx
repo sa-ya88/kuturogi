@@ -40,9 +40,9 @@ export default function ResetPassword({
 
             <section className="py-20 max-w-md mx-auto px-4">
                 <div className="bg-white border border-stone-200 p-8 shadow-sm">
-                    
+
                     <form onSubmit={submit} className="space-y-6">
-                        {/* メールアドレス（確認用として非活性で表示すると親切です） */}
+
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-stone-700">
                                 メールアドレス
@@ -61,7 +61,6 @@ export default function ResetPassword({
                             )}
                         </div>
 
-                        {/* 新しいパスワード */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-stone-700">
                                 新しいパスワード
@@ -81,7 +80,6 @@ export default function ResetPassword({
                             )}
                         </div>
 
-                        {/* 新しいパスワード（確認） */}
                         <div>
                             <label htmlFor="password_confirmation" className="block text-sm font-medium text-stone-700">
                                 新しいパスワード（確認）
@@ -100,7 +98,6 @@ export default function ResetPassword({
                             )}
                         </div>
 
-                        {/* 送信ボタン */}
                         <div className="pt-2">
                             <button
                                 type="submit"

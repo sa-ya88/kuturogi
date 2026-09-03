@@ -86,11 +86,9 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
         }
     }, [data.room_count]);
 
-    // バリデーションエラー用のローカルstate
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [quote, setQuote] = useState<any>(null);
 
-    // 宿泊日数を計算
     const nights = useMemo(() => {
         if (data.check_in_date && data.check_out_date) {
             return Math.max(1, Math.floor((new Date(data.check_out_date).getTime() - new Date(data.check_in_date).getTime()) / (1000 * 60 * 60 * 24)));
@@ -189,26 +187,22 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // バリデーション
+
         const newErrors: Record<string, string> = {};
-        
-        // 宿泊日程のバリデーション
+
         if (!data.check_in_date) {
             newErrors.check_in_date = 'チェックイン日を入力してください';
         }
         if (!data.check_out_date) {
             newErrors.check_out_date = 'チェックアウト日を入力してください';
         }
-        
-        // チェックイン日がチェックアウト日より前であることを確認
+
         if (data.check_in_date && data.check_out_date) {
             if (new Date(data.check_in_date) >= new Date(data.check_out_date)) {
                 newErrors.check_out_date = 'チェックアウト日はチェックイン日より後の日付を選択してください';
             }
         }
 
-        // お客様情報のバリデーション（会員は登録情報を使うため入力チェックしない）
         if (!isAuthenticated) {
             if (!data.last_name?.trim()) {
                 newErrors.last_name = 'お名前（姓）を入力してください';
@@ -260,13 +254,13 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                 newErrors[`selected_choices_${index}`] = `「${option.prompt}」を選択してください`;
             }
         });
-        
+
         if (Object.keys(newErrors).length > 0) {
             setValidationErrors(newErrors);
             scrollToField(Object.keys(newErrors)[0]);
             return;
         }
-        
+
         setValidationErrors({});
         transform((formData) => ({
             ...formData,
@@ -283,8 +277,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     <div className="lg:col-span-2 space-y-10">
-                        
-                        {/* 1. プラン情報 */}
+
                         <div className="bg-white border overflow-hidden">
                             {shouldUseSwiperPlan ? (
                                 <Swiper
@@ -318,7 +311,6 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             </div>
                         </div>
 
-                        {/* 2. 部屋情報と設備 */}
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-2 mb-6">お部屋：{room.name}</h2>
                             <div className="grid grid-cols-2 gap-8 mb-8">
@@ -381,17 +373,16 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             </p>
                         </div>
 
-                        {/* 2.5 チェックイン・チェックアウト日 */}
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-4 mb-6">宿泊日程</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-sm font-bold mb-2">チェックイン日 <span className="text-red-600">*</span></label>
-                                    <input 
+                                    <input
                                         id={reservationFieldId('check_in_date')}
-                                        type="date" 
-                                        value={data.check_in_date} 
-                                        onChange={e => setData('check_in_date', e.target.value)} 
+                                        type="date"
+                                        value={data.check_in_date}
+                                        onChange={e => setData('check_in_date', e.target.value)}
                                         className={`w-full border-stone-300 ${validationErrors.check_in_date ? 'border-red-500' : ''}`}
                                     />
                                     {validationErrors.check_in_date && (
@@ -400,11 +391,11 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                 </div>
                                 <div>
                                     <label className="block text-sm font-bold mb-2">チェックアウト日 <span className="text-red-600">*</span></label>
-                                    <input 
+                                    <input
                                         id={reservationFieldId('check_out_date')}
-                                        type="date" 
-                                        value={data.check_out_date} 
-                                        onChange={e => setData('check_out_date', e.target.value)} 
+                                        type="date"
+                                        value={data.check_out_date}
+                                        onChange={e => setData('check_out_date', e.target.value)}
                                         className={`w-full border-stone-300 ${validationErrors.check_out_date ? 'border-red-500' : ''}`}
                                     />
                                     {validationErrors.check_out_date && (
@@ -414,7 +405,6 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             </div>
                         </div>
 
-                        {/* 4. 人数・室数変更フォーム */}
                         <div className="bg-stone-100 p-8 border">
                             <h2 className="font-bold mb-6 tracking-widest text-center">宿泊人数の変更</h2>
                             <div className="flex justify-center gap-12">
@@ -508,7 +498,6 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                             </div>
                         )}
 
-                        {/* 6. お支払い方法 */}
                         <div className="bg-white border p-8">
                             <h2 className="text-lg font-bold border-b pb-4 mb-6">お支払い方法の選択</h2>
                             <div className="space-y-4">
@@ -538,11 +527,9 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                 </div>
                             )}
                         </div>
-                        
 
                     </div>
 
-                    {/* 右サイドバー：料金内訳 */}
                     <div className="h-fit sticky top-40">
                         <div className="bg-stone-800 text-white p-6 shadow-xl">
                             <h3 className="text-lg font-bold mb-6 border-b border-stone-600 pb-2 tracking-widest">料金内訳</h3>
@@ -579,7 +566,7 @@ export default function Details({ auth, input, room, plan, optionFees = [], canc
                                     <span className="text-2xl font-serif text-amber-400">¥{Number(totalPrice).toLocaleString()}</span>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={submit}
                                 disabled={processing}
                                 className="w-full bg-amber-700 text-white py-4 font-bold tracking-[0.2em] hover:bg-amber-600 transition shadow-lg"

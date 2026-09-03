@@ -1,8 +1,6 @@
-// resources/js/Pages/Top.tsx
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link } from '@inertiajs/react';
 
-// 型定義
 interface NewsItem {
     id: number;
     title: string;
@@ -14,11 +12,9 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
         <GuestLayout>
             <Head title="トップページ" />
 
-            {/* メインビジュアル */}
             <section className="relative h-screen flex items-center justify-center overflow-hidden">
                 <div className="absolute inset-0 bg-stone-900/40 z-10" />
-                
-                {/* 動画タグに差し替え */}
+
                 <video
                     src="/videos/main-visual.mp4"
                     autoPlay
@@ -31,7 +27,7 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
                     <h1 className="text-5xl md:text-7xl font-light tracking-[0.2em] mb-6">
                         心安らぐ、<br/>至福のひととき。
                     </h1>
-                    <Link 
+                    <Link
                         href={route('reservations.create', {
                             adults: 2,
                             children: 0,
@@ -44,7 +40,6 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
                 </div>
             </section>
 
-            {/* コンセプト紹介 */}
             <section className="py-24 px-4 max-w-3xl mx-auto text-center">
                 <span className="text-amber-700 tracking-[0.3em] text-sm uppercase block mb-4">Concept</span>
                 <h2 className="text-3xl font-light mb-8 tracking-widest">都会の喧騒を離れ、<br/>四季折々の情景に浸る。</h2>
@@ -55,7 +50,6 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
                 </p>
             </section>
 
-            {/* お知らせセクション（追加） */}
             <section className="py-20 bg-white">
                 <div className="max-w-4xl mx-auto px-4">
                     <h2 className="text-2xl font-light tracking-widest text-center mb-12">お知らせ</h2>

@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function RegisterDetails({ email, token }: Props) {
-    // 💡 Laravel側のバリデーション（birthday, zip_code）に合わせてキー名を修正
+
     const { data, setData, post, processing, errors, reset } = useForm({
         token: token || '',
         email: email || '',
@@ -18,16 +18,15 @@ export default function RegisterDetails({ email, token }: Props) {
         password_confirmation: '',
         name: '',
         name_kana: '',
-        birthday: '', // birthdate から birthday に変更
+        birthday: '',
         gender: '',
-        zip_code: '', // postal_code から zip_code に変更
+        zip_code: '',
         address: '',
     });
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
 
-        // 本登録（データ保存）のエンドポイントへポスト
         post(route('register.complete'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -57,14 +56,13 @@ export default function RegisterDetails({ email, token }: Props) {
                             });
                         }}
                     />
-                    
-                    {/* メールアドレスの確認表示（変更不可） */}
+
                     <div className="mb-6 p-4 bg-stone-50 border border-stone-100 rounded text-sm text-stone-600">
                         <span className="font-medium text-stone-700">登録メールアドレス:</span> {data.email}
                     </div>
 
                     <form onSubmit={submit} className="space-y-6">
-                        {/* パスワード */}
+
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-stone-700">
                                 パスワード
@@ -83,7 +81,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* パスワード（確認） */}
                         <div>
                             <label htmlFor="password_confirmation" className="block text-sm font-medium text-stone-700">
                                 パスワード（確認）
@@ -102,7 +99,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* お名前 */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-stone-700">
                                 お名前
@@ -122,7 +118,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* お名前（かな） */}
                         <div>
                             <label htmlFor="name_kana" className="block text-sm font-medium text-stone-700">
                                 お名前（かな）
@@ -142,7 +137,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* 生年月日 */}
                         <div>
                             <label htmlFor="birthday" className="block text-sm font-medium text-stone-700">
                                 生年月日
@@ -161,7 +155,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* 性別 */}
                         <div>
                             <label htmlFor="gender" className="block text-sm font-medium text-stone-700">
                                 性別
@@ -185,7 +178,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* 郵便番号 */}
                         <div>
                             <label htmlFor="zip_code" className="block text-sm font-medium text-stone-700">
                                 郵便番号
@@ -205,7 +197,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* 住所 */}
                         <div>
                             <label htmlFor="address" className="block text-sm font-medium text-stone-700">
                                 住所
@@ -225,7 +216,6 @@ export default function RegisterDetails({ email, token }: Props) {
                             )}
                         </div>
 
-                        {/* 送信ボタン */}
                         <div className="pt-4">
                             <button
                                 type="submit"

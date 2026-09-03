@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('news', function (Blueprint $table) {
             $table->id();
-            $table->string('title');       // タイトル
-            $table->text('content');       // 本文
-            $table->date('published_at');  // 公開日
+            $table->string('title');
+            $table->text('content');
+            $table->date('published_at');
             $table->timestamps();
         });
     }

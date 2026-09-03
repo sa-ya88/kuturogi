@@ -2,24 +2,21 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Room;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $room = \App\Models\Room::first();
+        $room = Room::first();
 
         if ($room) {
             $room->plans()->createMany([
                 [
                     'name' => '【基本】創作会席・1泊2食付プラン',
                     'price_per_person' => 4400,
-                    'description' => '当館一番人気のスタンダードなプランです内。',
+                    'description' => '当館一番人気のスタンダードなプランです。',
                     'images' => [
                         '/images/dinner1.webp','/images/onsen1.webp','/images/morning1.webp',
                     ],

@@ -22,7 +22,6 @@ const hasSpecifiedStayDates = (checkin: unknown, checkout: unknown): boolean => 
     return Boolean(start && end && start < end);
 };
 
-// 日付を指定日数分進める/戻す ヘルパー関数
 const addDays = (dateStr: string, days: number): string => {
     const parsed = parseStayDate(dateStr);
     if (!parsed) {
@@ -74,17 +73,16 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
 
     const handleCheckinChange = (value: string) => {
         let newCheckout = searchQuery.checkout;
-        
-        // checkoutが空の場合、checkinの翌日を自動設定
+
         if (value && !newCheckout) {
             newCheckout = addDays(value, 1);
         } else if (value && newCheckout) {
-            // checkoutがcheckIn以前の場合、checkoutをcheckinの翌日に設定
+
             if (new Date(newCheckout) <= new Date(value)) {
                 newCheckout = addDays(value, 1);
             }
         }
-        
+
         const next = { ...searchQuery, checkin: value, checkout: newCheckout };
         setSearchQuery(next);
         if (hasSpecifiedStayDates(next.checkin, next.checkout)) {
@@ -94,17 +92,16 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
 
     const handleCheckoutChange = (value: string) => {
         let newCheckin = searchQuery.checkin;
-        
-        // checkinが空の場合、checkoutの前日を自動設定
+
         if (value && !newCheckin) {
             newCheckin = addDays(value, -1);
         } else if (value && newCheckin) {
-            // checkinがcheckoutと同日以降の場合、checkinをcheckoutの前日に設定
+
             if (new Date(newCheckin) >= new Date(value)) {
                 newCheckin = addDays(value, -1);
             }
         }
-        
+
         const next = { ...searchQuery, checkin: newCheckin, checkout: value };
         setSearchQuery(next);
         if (hasSpecifiedStayDates(next.checkin, next.checkout)) {
@@ -165,29 +162,27 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
         setCalendarTarget(null);
         submitReservation(planId, roomId, checkin, checkout);
     };
-    
+
     const groupedPlans = useMemo(() => {
         const groups: any = {};
 
-        // 宿泊日数を計算（日付が指定されていない場合は1泊と仮定）
-        const nights = (searchQuery.checkin && searchQuery.checkout) 
+        const nights = (searchQuery.checkin && searchQuery.checkout)
             ? Math.max(1, Math.floor((new Date(searchQuery.checkout).getTime() - new Date(searchQuery.checkin).getTime()) / (1000 * 60 * 60 * 24)))
             : 1;
 
-        // 1. 各部屋にぶら下がっているプランをループ
         rooms.forEach((room: any) => {
-            // room.plans が undefined や空配列でないか確認
+
             if (!room.plans) return;
 
             room.plans.forEach((plan: any) => {
-                // プラン名（またはID）をキーにしてグループ化
-                const groupKey = plan.name; 
+
+                const groupKey = plan.name;
 
                 if (!groups[groupKey]) {
-                    groups[groupKey] = { 
-                        ...plan, 
+                    groups[groupKey] = {
+                        ...plan,
                         plan_thumbnail: plan.images?.[0] || '/images/no-image.png',
-                        room_options: [] 
+                        room_options: []
                     };
                 }
 
@@ -224,22 +219,20 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
         return result;
     }, [rooms, searchQuery.room_id, searchQuery.room_count, searchQuery.checkin, searchQuery.checkout]);
 
-
     return (
         <GuestLayout>
             <Head title="宿泊プラン一覧" />
 
-            {/* 1. 検索バー（固定ヘッダー h-10 + h-16 の下に配置） */}
             <div className="pt-[6.5rem]">
                 <div className="sticky top-[6.5rem] z-40 border-t border-stone-700 bg-stone-800 text-white">
                     <div className="mx-auto max-w-7xl px-4 py-6">
                     <div className="flex flex-wrap items-center gap-y-6 gap-x-8 text-xs">
-                        {/* 部屋タイプ */}
+
                         <div className="flex items-center gap-3">
                             <span className="opacity-70 font-bold">部屋タイプ</span>
-                            <select 
+                            <select
                                 className="bg-stone-700 border-stone-600 text-white h-10 rounded px-4 w-48 text-sm focus:ring-amber-500"
-                                value={searchQuery.room_id} 
+                                value={searchQuery.room_id}
                                 onChange={e => setSearchQuery({...searchQuery, room_id: e.target.value})}
                             >
                                 <option value="">すべての部屋</option>
@@ -247,7 +240,6 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                             </select>
                         </div>
 
-                        {/* 日程 */}
                         <div className="flex items-center gap-3 border-l border-stone-600 pl-8">
                             <span className="opacity-70 font-bold">ご宿泊日程</span>
                             <div className="flex items-center gap-2">
@@ -272,7 +264,6 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                             </div>
                         </div>
 
-                        {/* 人数・室数 */}
                         <div className="flex items-center gap-6 border-l border-stone-600 pl-8">
                             <div className="flex items-center gap-2">
                                 <span className="opacity-70 font-bold">大人</span>
@@ -291,7 +282,6 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                             </div>
                         </div>
 
-                        {/* ボタン類 */}
                         <div className="flex gap-3 ml-auto">
                             <button type="button" className="bg-stone-600 px-6 h-10 rounded hover:bg-stone-500 transition-colors font-medium" onClick={() => {
                                 const cleared = {room_id: '', checkin: '', checkout: '', adults: 2, children: 0, room_count: 1};
@@ -305,7 +295,6 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                 </div>
             </div>
 
-            {/* 2. メインコンテンツ*/}
             <section className="py-12 max-w-7xl mx-auto px-4 mt-4">
                 <div className="bg-amber-50 border border-amber-200 p-4 mt-10 mb-10 text-xs text-amber-900 leading-loose flex items-start gap-3">
                     <span className="text-lg">info</span>
@@ -318,16 +307,15 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                 <div className="space-y-12">
                     {groupedPlans.map((group: any) => (
                         <div key={group.id} className="bg-white border border-stone-200 flex flex-col lg:flex-row shadow-sm overflow-hidden group">
-                            {/* 左：画像 */}
+
                             <div className="lg:w-1/4 h-64 lg:h-auto overflow-hidden">
-                                <img 
+                                <img
                                     src={group.plan_thumbnail}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                                    alt={group.name} 
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    alt={group.name}
                                 />
                             </div>
 
-                            {/* 中：プラン詳細 */}
                             <div className="lg:w-2/5 p-8 border-r border-stone-100 flex flex-col justify-between">
                                 <div>
                                     <h3 className="text-xl font-bold text-stone-800 mb-4 tracking-wider">{group.name}</h3>
@@ -338,19 +326,16 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                                 </button>
                             </div>
 
-                            {/* 右：お部屋選択肢（全て表示） */}
                             <div className="flex flex-col gap-1">
                                 {group.room_options.map((option: any) => (
                                     <div key={option.room_id} className="flex items-center justify-between bg-stone-50 p-4 rounded border border-stone-100">
-                                        
-                                        {/* 1. 部屋情報エリア*/}
+
                                         <div className="flex-1 min-w-0 pr-4">
                                             <p className="text-sm font-bold text-stone-800 truncate">
                                                 {option.room_name}
                                             </p>
                                         </div>
 
-                                        {/* 2. 価格エリア*/}
                                         <div className="w-32 text-right pr-6">
                                             <span className="text-xs text-stone-500">1名 </span>
                                             <span className="text-lg font-bold text-amber-900">
@@ -358,8 +343,7 @@ export default function Create({ rooms, selectedRoomId, searchParams = {} }: any
                                             </span>
                                         </div>
 
-                                        {/* 3. ボタンエリア*/}
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={(event) => handleReserve(event, group.id, option.room_id, group.name, option.room_name)}
                                             className="w-40 py-2 bg-stone-800 text-white text-xs tracking-[0.2em] font-bold hover:bg-stone-700 transition-all flex-shrink-0"
