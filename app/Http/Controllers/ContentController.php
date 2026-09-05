@@ -44,4 +44,11 @@ class ContentController extends Controller
             'news' => News::latest('published_at')->get(),
         ]);
     }
+
+    public function newsShow(News $news): Response
+    {
+        return Inertia::render('News/Show', [
+            'article' => $news,
+        ]);
+    }
 }

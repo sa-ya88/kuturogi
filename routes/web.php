@@ -37,6 +37,7 @@ Route::get('/onsen', [ContentController::class, 'onsen'])->name('onsen');
 Route::get('/food', [ContentController::class, 'food'])->name('food');
 Route::get('/sightseeing', [ContentController::class, 'sightseeing'])->name('sightseeing');
 Route::get('/news', [ContentController::class, 'news'])->name('news');
+Route::get('/news/{news}', [ContentController::class, 'newsShow'])->name('news.show');
 Route::get('/access', [ContentController::class, 'access'])->name('access');
 Route::get('/company', [ContentController::class, 'company'])->name('company');
 Route::get('/faq', [ContentController::class, 'faq'])->name('faq');

@@ -1,5 +1,5 @@
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function NewsIndex({ news }: any) {
 
@@ -27,9 +27,10 @@ export default function NewsIndex({ news }: any) {
                 {news && news.length > 0 ? (
                     <div className="space-y-6">
                         {news.map((article: any) => (
-                            <div
+                            <Link
                                 key={article.id}
-                                className="bg-white border border-stone-200 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer group"
+                                href={route('news.show', article.id)}
+                                className="block bg-white border border-stone-200 p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer group"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                                     <div className="flex-1 min-w-0">
@@ -44,7 +45,7 @@ export default function NewsIndex({ news }: any) {
                                         <h2 className="text-lg font-bold text-stone-800 mb-2 leading-tight group-hover:text-amber-700 transition-colors">
                                             {article.title}
                                         </h2>
-                                        <p className="text-sm text-stone-600 line-clamp-3 leading-relaxed">
+                                        <p className="text-sm text-stone-600 line-clamp-3 leading-relaxed whitespace-pre-wrap">
                                             {article.content}
                                         </p>
                                     </div>
@@ -58,7 +59,7 @@ export default function NewsIndex({ news }: any) {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 ) : (

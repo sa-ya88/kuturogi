@@ -8,6 +8,10 @@ interface NewsItem {
 }
 
 export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
+    const formatDate = (dateString: string) => {
+        return dateString.slice(0, 10).replaceAll('-', '/');
+    };
+
     return (
         <GuestLayout>
             <Head title="トップページ" />
@@ -56,8 +60,8 @@ export default function Top({ latestNews }: { latestNews: NewsItem[] }) {
                     <div className="space-y-6">
                         {latestNews.map((item) => (
                             <div key={item.id} className="flex border-b border-stone-100 pb-4 items-center">
-                                <span className="text-xs text-stone-500 w-32">{item.published_at}</span>
-                                <Link href="/news" className="flex-1 hover:text-amber-800 transition-colors">
+                                <span className="text-xs text-stone-500 w-24 shrink-0">{formatDate(item.published_at)}</span>
+                                <Link href={route('news.show', item.id)} className="flex-1 hover:text-amber-800 transition-colors">
                                     {item.title}
                                 </Link>
                             </div>
